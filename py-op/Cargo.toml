@@ -1,0 +1,26 @@
+[package]
+name = "py-op"
+version = "0.1.0"
+repository = "https://github.com/atolab/zenoh-flow-examples"
+homepage = "http://zenoh.io"
+authors = ["kydos <angelo@icorsaro.net>",
+           "gabrik <gabriele.baldoni@gmail.com>",
+           "Julien Loudet <julien.loudet@adlinktech.com>",]
+edition = "2018"
+license = " EPL-2.0 OR Apache-2.0"
+categories = ["network-programming"]
+description = "Zenoh Flow Examples"
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+zenoh-flow = { git = "https://github.com/eclipse-zenoh/zenoh-flow.git", branch = "master"}
+zenoh-flow-python-types = {path = "../zenoh-flow-python-types/"}
+pyo3 = "0.14.5"
+
+[lib]
+name = "py_op"
+crate-type=["cdylib"]
+path="src/lib.rs"
+

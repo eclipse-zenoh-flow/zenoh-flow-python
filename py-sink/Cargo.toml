@@ -1,0 +1,19 @@
+[package]
+name = "py-sink"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+zenoh-flow = { git = "https://github.com/eclipse-zenoh/zenoh-flow.git", branch = "master"}
+async-trait = "0.1"
+zenoh-flow-python-types = {path = "../zenoh-flow-python-types/"}
+pyo3 = "0.14.5"
+
+
+[lib]
+name = "py_sink"
+crate-type=["cdylib"]
+path="src/lib.rs"
