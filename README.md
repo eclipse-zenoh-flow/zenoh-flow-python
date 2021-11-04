@@ -10,7 +10,7 @@
 
 ### Requirements
 
-- Rust: see the [installation page](https://www.rust-lang.org/tools/install)\
+- Rust: see the [installation page](https://www.rust-lang.org/tools/install)
 - Python >= 3.6
 - pip >= 19.3.1
 - maturin >= 0.9.0
@@ -31,8 +31,8 @@ $ venv/bin/activate
 Build the Python Wheel
 
 ```bash
-$ cd zenoh-flow-python
-$ maturin build
+(venv) $ cd zenoh-flow-python
+(venv) $ maturin build
 ...
 📦 Built wheel for abi3 Python ≥ 3.6 to /path/to/zenoh-flow-python/target/wheels/zenoh_flow_python-0.1.0-cp36-abi3-macosx_10_7_x86_64.whl
 ```
