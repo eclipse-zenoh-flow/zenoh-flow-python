@@ -96,7 +96,12 @@ impl Operator {
         ))
     }
 
-    fn run(&self, _context: &mut Context, _state: Py<PyAny>, _inputs: Inputs) -> PyResult<Py<PyDict>> {
+    fn run(
+        &self,
+        _context: &mut Context,
+        _state: Py<PyAny>,
+        _inputs: Inputs,
+    ) -> PyResult<Py<PyDict>> {
         Err(pyo3::exceptions::PyNotImplementedError::new_err(
             "Not implemented",
         ))

@@ -1,0 +1,7 @@
+extensions:
+  - name: python
+    file_extension: py
+    source_lib: ./target/debug/libpy_source.dylib
+    sink_lib: ./target/debug/libpy_sink.dylib
+    operator_lib: ./target/debug/libpy_op.dylib
+    config_lib_key: python-script

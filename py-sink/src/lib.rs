@@ -73,9 +73,10 @@ impl Node for PySink {
                         .ok_or(ZFError::InvalidState)?,
                 );
                 let mut config = configuration.clone();
-                config["python-script"].take();
 
-                let py_config = into_py(py, config);
+                config["python-script"].take();
+                let py_config = config["configuration"].take();
+                let py_config = into_py(py, py_config);
 
                 let code = read_file(script_file_path);
                 let module = PyModule::from_code(py, &code, "sink.py", "sink")

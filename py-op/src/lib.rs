@@ -12,19 +12,21 @@
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
 
-use pyo3::{prelude::*, types::{PyModule, PyDict}};
+use pyo3::{
+    prelude::*,
+    types::{PyDict, PyModule},
+};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
 use std::fs;
 use std::path::Path;
-use zenoh_flow::async_std::sync::Arc;
 use zenoh_flow::runtime::message::DataMessage;
 use zenoh_flow::zenoh_flow_derive::ZFState;
 use zenoh_flow::Configuration;
 use zenoh_flow::{
-    default_input_rule, default_output_rule, export_operator, types::ZFResult, Node, NodeOutput,
-    Operator, PortId, State, Token,
+    async_std::sync::Arc, default_input_rule, default_output_rule, export_operator,
+    types::ZFResult, DeadlineMiss, Node, NodeOutput, Operator, PortId, State, Token,
 };
 use zenoh_flow::{Context, Data, ZFError};
 use zenoh_flow_python_types::into_py;
@@ -91,11 +93,12 @@ impl Operator for PyOperator {
         // );
         // println!("Python Values type? {:?}", py_values.as_ref(py).get_type());
 
-        let values : PyObject = py_values.into();
-        let dict : &PyDict = values.extract(py).map_err(|e| ZFError::InvalidData(e.to_string()))?;
-        let dict : Py<PyDict> = dict.into();
+        let values: PyObject = py_values.into();
+        let dict: &PyDict = values
+            .extract(py)
+            .map_err(|e| ZFError::InvalidData(e.to_string()))?;
+        let dict: Py<PyDict> = dict.into();
         let values = PyOutputs::try_from((dict, py))?;
-
 
         // let dict : &PyDict = py_values.extract(py).map_err(|e| ZFError::InvalidData(e.to_string()))?;
         // let dict : Py<PyDict> = dict.into();
@@ -109,6 +112,7 @@ impl Operator for PyOperator {
         _context: &mut Context,
         state: &mut State,
         outputs: HashMap<zenoh_flow::PortId, Data>,
+        _deadlinemiss: Option<DeadlineMiss>,
     ) -> ZFResult<HashMap<zenoh_flow::PortId, NodeOutput>> {
         default_output_rule(state, outputs)
     }
@@ -128,8 +132,8 @@ impl Node for PyOperator {
                 );
                 let mut config = configuration.clone();
                 config["python-script"].take();
-
-                let py_config = into_py(py, config);
+                let py_config = config["configuration"].take();
+                let py_config = into_py(py, py_config);
 
                 let code = read_file(script_file_path);
                 let module = PyModule::from_code(py, &code, "op.py", "op")

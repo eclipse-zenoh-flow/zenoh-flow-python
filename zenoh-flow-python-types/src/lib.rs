@@ -174,9 +174,6 @@ impl Outputs {
     fn put(&mut self, id: String, data: Vec<u8>) -> () {
         self.outputs.insert(id, data);
     }
-
-
-
 }
 
 #[pyproto]
@@ -221,7 +218,9 @@ impl TryFrom<(Py<PyDict>, Python<'_>)> for Outputs {
         let mut outputs = HashMap::new();
         for (k, v) in dict.as_ref(py).into_iter() {
             let port_id = k.to_string();
-            let data : Vec<u8> = v.extract().map_err(|e| ZFError::InvalidData(e.to_string()))?;
+            let data: Vec<u8> = v
+                .extract()
+                .map_err(|e| ZFError::InvalidData(e.to_string()))?;
             outputs.insert(port_id, data);
         }
         Ok(Self { outputs })
@@ -231,6 +230,7 @@ impl TryFrom<(Py<PyDict>, Python<'_>)> for Outputs {
 impl TryInto<HashMap<zenoh_flow::PortId, zenoh_flow::Data>> for Outputs {
     type Error = ZFError;
     fn try_into(self: Self) -> Result<HashMap<zenoh_flow::PortId, zenoh_flow::Data>, Self::Error> {
+
         let mut outputs = HashMap::new();
         for (k, v) in self.outputs {
             let data = zenoh_flow::Data::from_bytes(v);

@@ -1,44 +1,28 @@
 flow: RandomGeneration
 operators:
   - id : PyOp
-    uri: file:///Users/gabri/Workspace/zenoh-flow-python/target/debug/libpy_op.dylib
+    uri: file://./zenoh-flow-python/examples/operator.py
     inputs:
       - id: Data
         type: usize
     outputs:
       - id: Data
         type: usize
-    configuration:
-      python-script: /Users/gabri/Workspace/zenoh-flow-python/zenoh-flow-python/examples/operator.py
 sources:
   - id : RandomGenerator
-    uri: file:///Users/gabri/Workspace/zenoh-flow-python/target/debug/libpy_source.dylib
+    uri: file://./zenoh-flow-python/examples/source.py
     configuration:
-      python-script: /Users/gabri/Workspace/zenoh-flow-python/zenoh-flow-python/examples/source.py
       value: 0
     output:
         id: Random
         type: usize
 sinks:
-  # - id : PrintSink
-  #   uri: file:///Users/gabri/Workspace/zenoh-flow-examples/target/release/libgeneric_sink.dylib
-  #   input:
-  #       id: Data
-  #       type: usize
   - id : PyPrint
-    uri: file:///Users/gabri/Workspace/zenoh-flow-python/target/debug/libpy_sink.dylib
-    configuration:
-      python-script: /Users/gabri/Workspace/zenoh-flow-python/zenoh-flow-python/examples/sink.py
+    uri: file://./zenoh-flow-python/examples/sink.py
     input:
         id: Data
         type: usize
 links:
-# - from:
-#     node : PyOp
-#     output : Data
-#   to:
-#     node : PrintSink
-#     input : Data
 - from:
     node : RandomGenerator
     output : Random

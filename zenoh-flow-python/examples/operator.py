@@ -29,10 +29,10 @@ class MyOp(Operator):
         int_data = int_from_bytes(data)
         int_data = int_data * 2
         # print(f'updated data {int_data}')
-        outputs = {'Data' : int_to_bytes(int_data)}
+        # outputs = {'Data' : int_to_bytes(int_data)}
         # print(type(output))
-        #outputs = Outputs()
-        #outputs.put('Data', int_to_bytes(int_data))
+        outputs = Outputs()
+        outputs.put('Data', int_to_bytes(int_data))
 
         return outputs
 
