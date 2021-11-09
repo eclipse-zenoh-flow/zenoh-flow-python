@@ -14,8 +14,8 @@
 
 use pyo3::types::PyDict;
 use pyo3::{prelude::*, types::PyModule};
-
-pub use zenoh_flow_python_types::{Context, Inputs, Outputs};
+use std::collections::HashMap;
+pub use zenoh_flow_python_types::{Context, DeadlineMiss, Inputs, Outputs, Token};
 
 #[pyclass(subclass)]
 pub struct Source {}
@@ -89,7 +89,7 @@ impl Operator {
         &self,
         _context: &mut Context,
         _state: Py<PyAny>,
-        _tokens: Py<PyDict>,
+        _tokens: HashMap<String, Token>,
     ) -> PyResult<bool> {
         Err(pyo3::exceptions::PyNotImplementedError::new_err(
             "Not implemented",
@@ -112,6 +112,7 @@ impl Operator {
         _context: &mut Context,
         _state: Py<PyAny>,
         _outputs: Outputs,
+        _deadline_miss: DeadlineMiss,
     ) -> PyResult<Outputs> {
         Err(pyo3::exceptions::PyNotImplementedError::new_err(
             "Not implemented",

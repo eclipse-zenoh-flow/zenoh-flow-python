@@ -14,7 +14,7 @@
 
 use pyo3::{
     prelude::*,
-    types::{PyDict, PyModule},
+    types::{PyModule},
 };
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -25,14 +25,16 @@ use zenoh_flow::runtime::message::DataMessage;
 use zenoh_flow::zenoh_flow_derive::ZFState;
 use zenoh_flow::Configuration;
 use zenoh_flow::{
-    async_std::sync::Arc, default_input_rule, default_output_rule, export_operator,
-    types::ZFResult, DeadlineMiss, Node, NodeOutput, Operator, PortId, State, Token,
+    async_std::sync::Arc, export_operator, types::ZFResult, DeadlineMiss, Node, NodeOutput,
+    Operator, PortId, State, Token,
 };
 use zenoh_flow::{Context, Data, ZFError};
-use zenoh_flow_python_types::into_py;
+use zenoh_flow_python_types::utils::{configuration_into_py, outputs_from_py, tokens_into_py};
 use zenoh_flow_python_types::Context as PyContext;
+use zenoh_flow_python_types::DeadlineMiss as PyDeadlineMiss;
 use zenoh_flow_python_types::Inputs as PyInputs;
 use zenoh_flow_python_types::Outputs as PyOutputs;
+use zenoh_flow_python_types::Token as PyToken;
 
 #[derive(ZFState, Clone)]
 struct PythonState {
@@ -53,11 +55,58 @@ struct PyOperator;
 impl Operator for PyOperator {
     fn input_rule(
         &self,
-        _context: &mut Context,
+        ctx: &mut Context,
         state: &mut State,
         tokens: &mut HashMap<PortId, Token>,
     ) -> ZFResult<bool> {
-        default_input_rule(state, tokens)
+        // Getting tokens for conversion to Python
+        let real_tokens = std::mem::replace(tokens, HashMap::new());
+
+        // Preparing python environment
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        // Preparing parameters
+        let current_state = state.try_get::<PythonState>()?;
+        let op_class = current_state.module.as_ref().clone();
+        let py_ctx = PyContext::from(ctx);
+        let py_tokens = tokens_into_py(py, real_tokens);
+
+        // Calling python code
+        let ir_result: bool = op_class
+            .call_method1(
+                py,
+                "input_rule",
+                (
+                    op_class.clone(),
+                    py_ctx,
+                    current_state.py_state.as_ref().clone(),
+                    &py_tokens,
+                ),
+            )
+            .map_err(|e| ZFError::InvalidData(e.to_string()))?
+            .extract(py)
+            .map_err(|e| ZFError::InvalidData(e.to_string()))?;
+
+        // Getting back the tokens
+        let py_tokens: HashMap<String, PyToken> = py_tokens
+            .extract(py)
+            .map_err(|e| ZFError::InvalidData(e.to_string()))?;
+
+        // Converting the tokens to the rust type
+        let new_tokens = {
+            let mut n_tokens = HashMap::new();
+            for (id, t) in py_tokens {
+                n_tokens.insert(id.into(), t.into());
+            }
+
+            n_tokens
+        };
+
+        // Update tokens
+        *tokens = new_tokens;
+
+        Ok(ir_result)
     }
 
     fn run(
@@ -66,13 +115,17 @@ impl Operator for PyOperator {
         state: &mut State,
         inputs: &mut HashMap<PortId, DataMessage>,
     ) -> ZFResult<HashMap<PortId, Data>> {
+        // Prepare Python
         let gil = Python::acquire_gil();
         let py = gil.python();
+
+        // Preparing parameters
         let current_state = state.try_get::<PythonState>()?;
         let op_class = current_state.module.as_ref().clone();
-
         let py_ctx = PyContext::from(ctx);
         let py_data = PyInputs::try_from(inputs)?;
+
+        // Call python copde
         let py_values = op_class
             .call_method1(
                 py,
@@ -86,45 +139,71 @@ impl Operator for PyOperator {
             )
             .map_err(|e| ZFError::InvalidData(e.to_string()))?;
 
-        // println!("Python values {:?}", py_values);
-        // println!(
-        //     "Is outputs? {:?}",
-        //     py_values.as_ref(py).is_instance::<PyOutputs>()
-        // );
-        // println!("Python Values type? {:?}", py_values.as_ref(py).get_type());
-
-        let values: PyObject = py_values.into();
-        let dict: &PyDict = values
-            .extract(py)
-            .map_err(|e| ZFError::InvalidData(e.to_string()))?;
-        let dict: Py<PyDict> = dict.into();
-        let values = PyOutputs::try_from((dict, py))?;
-
-        // let dict : &PyDict = py_values.extract(py).map_err(|e| ZFError::InvalidData(e.to_string()))?;
-        // let dict : Py<PyDict> = dict.into();
-        // let values = PyOutputs::try_from((dict, py))?;
+        // Converting the results
+        let values = outputs_from_py(py, py_values.into())?;
 
         Ok(values.try_into()?)
     }
 
     fn output_rule(
         &self,
-        _context: &mut Context,
+        ctx: &mut Context,
         state: &mut State,
-        outputs: HashMap<zenoh_flow::PortId, Data>,
-        _deadlinemiss: Option<DeadlineMiss>,
-    ) -> ZFResult<HashMap<zenoh_flow::PortId, NodeOutput>> {
-        default_output_rule(state, outputs)
+        outputs: HashMap<PortId, Data>,
+        deadlinemiss: Option<DeadlineMiss>,
+    ) -> ZFResult<HashMap<PortId, NodeOutput>> {
+        // Preparing python
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        // Preparing parameters
+        let current_state = state.try_get::<PythonState>()?;
+        let op_class = current_state.module.as_ref().clone();
+        let py_ctx = PyContext::from(ctx);
+        let py_data = PyOutputs::try_from(outputs)?;
+        let deadline_miss = PyDeadlineMiss::from(deadlinemiss);
+
+        // Calling pthon code
+        let py_values = op_class
+            .call_method1(
+                py,
+                "output_rule",
+                (
+                    op_class.clone(),
+                    py_ctx,
+                    current_state.py_state.as_ref().clone(),
+                    py_data,
+                    deadline_miss,
+                ),
+            )
+            .map_err(|e| ZFError::InvalidData(e.to_string()))?;
+
+        // Converting the results
+        let py_values = outputs_from_py(py, py_values.into())?;
+
+        // Generating the rust output
+        let rust_values: HashMap<PortId, Data> = py_values.try_into()?;
+
+        let mut results = HashMap::with_capacity(rust_values.len());
+        for (k, v) in rust_values {
+            results.insert(k, NodeOutput::Data(v));
+        }
+
+        Ok(results)
     }
 }
 
 impl Node for PyOperator {
     fn initialize(&self, configuration: &Option<Configuration>) -> ZFResult<State> {
+        // Preparing python
         pyo3::prepare_freethreaded_python();
         let gil = Python::acquire_gil();
         let py = gil.python();
+
+        // Configuring wrapper + python operator
         match configuration {
             Some(configuration) => {
+                // Unwrapping configuration
                 let script_file_path = Path::new(
                     configuration["python-script"]
                         .as_str()
@@ -133,17 +212,22 @@ impl Node for PyOperator {
                 let mut config = configuration.clone();
                 config["python-script"].take();
                 let py_config = config["configuration"].take();
-                let py_config = into_py(py, py_config);
 
+                // Convert configuration to Python
+                let py_config = configuration_into_py(py, py_config);
+
+                // Load Python code
                 let code = read_file(script_file_path);
                 let module = PyModule::from_code(py, &code, "op.py", "op")
                     .map_err(|e| ZFError::InvalidData(e.to_string()))?;
 
+                // Getting the correct python module
                 let op_class: PyObject = module
                     .call_method0("register")
                     .map_err(|e| ZFError::InvalidData(e.to_string()))?
                     .into();
 
+                // Initialize python state
                 let state: PyObject = op_class
                     .call_method1(py, "initialize", (op_class.clone(), py_config))
                     .map_err(|e| ZFError::InvalidData(e.to_string()))?

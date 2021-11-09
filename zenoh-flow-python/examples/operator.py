@@ -12,28 +12,55 @@
 ##   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 ##
 
-from zenoh_flow import Inputs, Outputs, Operator
+from zenoh_flow import Inputs, Operator
 
+class MyState:
+    def __init__(self):
+        self.value = 0
+
+    def inc(self):
+        self.value += 1
+
+    def mod_2(self):
+        return (self.value % 2)
+
+    def mod_3(self):
+        return (self.value % 3)
 
 class MyOp(Operator):
     def initialize(self, configuration):
-        return None
+         return MyState()
 
     def finalize(self, state):
         return None
 
+    def input_rule(self, _ctx, state, tokens):
+        # Using input rules
+        state.inc()
+        token = tokens.get('Data')
+        if state.mod_2():
+            token.set_action_consume()
+            return True
+        elif state.mod_3():
+            token.set_action_keep()
+            return True
+        else:
+            token.set_action_drop()
+            return False
+
+    def output_rule(self, _ctx, _state, outputs, _deadline_miss):
+        return outputs
+
     def run(self, _ctx, _state, inputs):
-        # print(type(inputs))
+        # Getting the inputs
         data = inputs.get('Data').data
-        # print(f'data {data}')
+
+        # Computing over the inputs
         int_data = int_from_bytes(data)
         int_data = int_data * 2
-        # print(f'updated data {int_data}')
-        outputs = {'Data' : int_to_bytes(int_data)}
-        # print(type(output))
-        # outputs = Outputs()
-        # outputs.put('Data', int_to_bytes(int_data))
 
+        # Producing the outputs
+        outputs = {'Data' : int_to_bytes(int_data)}
         return outputs
 
 

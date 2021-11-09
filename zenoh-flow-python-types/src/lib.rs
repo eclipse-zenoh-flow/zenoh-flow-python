@@ -13,34 +13,14 @@
 //
 
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList};
+use pyo3::types::{PyDict};
 use pyo3::PyObjectProtocol;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::convert::{From, TryFrom};
 use zenoh_flow::ZFError;
-pub fn into_py(py: Python, value: zenoh_flow::Configuration) -> PyObject {
-    match value {
-        zenoh_flow::Configuration::Array(arr) => {
-            let py_list = PyList::empty(py);
-            for v in arr {
-                py_list.append(into_py(py, v)).unwrap();
-            }
-            py_list.to_object(py)
-        }
-        zenoh_flow::Configuration::Object(obj) => {
-            let py_dict = PyDict::new(py);
-            for (k, v) in obj {
-                py_dict.set_item(k, into_py(py, v)).unwrap();
-            }
-            py_dict.to_object(py)
-        }
-        zenoh_flow::Configuration::Bool(b) => b.to_object(py),
-        zenoh_flow::Configuration::Number(n) => n.as_u64().unwrap().to_object(py), //TODO convert to the right number
-        zenoh_flow::Configuration::String(s) => s.to_object(py),
-        zenoh_flow::Configuration::Null => py.None(),
-    }
-}
+
+pub mod utils;
 
 #[pyclass]
 pub struct Context {
@@ -230,12 +210,176 @@ impl TryFrom<(Py<PyDict>, Python<'_>)> for Outputs {
 impl TryInto<HashMap<zenoh_flow::PortId, zenoh_flow::Data>> for Outputs {
     type Error = ZFError;
     fn try_into(self: Self) -> Result<HashMap<zenoh_flow::PortId, zenoh_flow::Data>, Self::Error> {
-
         let mut outputs = HashMap::new();
         for (k, v) in self.outputs {
             let data = zenoh_flow::Data::from_bytes(v);
             outputs.insert(k.into(), data);
         }
         Ok(outputs)
+    }
+}
+
+#[pyclass]
+#[derive(Clone, Debug)]
+pub struct Token {
+    pub(crate) token: zenoh_flow::Token,
+}
+
+#[pymethods]
+impl Token {
+    pub fn set_action_drop(&mut self) {
+        match &mut self.token {
+            zenoh_flow::Token::Ready(ref mut r) => r.set_action_drop(),
+            _ => (),
+        }
+    }
+
+    pub fn set_action_keep(&mut self) {
+        match &mut self.token {
+            zenoh_flow::Token::Ready(ref mut r) => r.set_action_keep(),
+            _ => (),
+        }
+    }
+
+    pub fn set_action_consume(&mut self) {
+        match &mut self.token {
+            zenoh_flow::Token::Ready(ref mut r) => r.set_action_consume(),
+            _ => (),
+        }
+    }
+
+    pub fn get_timestamp(&self) -> String {
+        match &self.token {
+            zenoh_flow::Token::Ready(ref r) => r.get_timestamp().to_string(),
+            _ => String::from(""),
+        }
+    }
+
+    pub fn get_data(&mut self) -> PyResult<Vec<u8>> {
+        match &mut self.token {
+            zenoh_flow::Token::Ready(ref mut r) => {
+                let data = r.get_data_mut();
+                Ok(data
+                    .try_as_bytes()
+                    .map_err(|_| {
+                        pyo3::exceptions::PyValueError::new_err("Unable to get data from token")
+                    })?
+                    .to_vec())
+            }
+            _ => Err(pyo3::exceptions::PyValueError::new_err(
+                "Pending Token has no data",
+            )),
+        }
+    }
+
+    pub fn get_action(&self) -> String {
+        match &self.token {
+            zenoh_flow::Token::Ready(ref r) => r.get_action().to_string(),
+            _ => String::from("Pending"),
+        }
+    }
+}
+
+impl From<zenoh_flow::Token> for Token {
+    fn from(token: zenoh_flow::Token) -> Self {
+        Self { token }
+    }
+}
+
+impl Into<zenoh_flow::Token> for Token {
+    fn into(self) -> zenoh_flow::Token {
+        self.token
+    }
+}
+
+#[pyclass]
+#[derive(Clone, Debug)]
+pub struct Tokens {
+    pub(crate) tokens: HashMap<String, Token>,
+}
+
+#[pymethods]
+impl Tokens {
+    pub fn get(&mut self, port_id: String) -> PyResult<Token> {
+        match self.tokens.get(&port_id) {
+            Some(t) => Ok(t.clone()),
+            None => Err(pyo3::exceptions::PyValueError::new_err(
+                format!("No tokens found for the given port_id {}", port_id).to_string(),
+            )),
+        }
+    }
+}
+
+// impl From<zenoh_flow::Tokens> for Tokens {
+//     fn from(tokens: zenoh_flow::Tokens) -> Self {
+//         Self { tokens }
+//     }
+// }
+
+impl From<HashMap<zenoh_flow::PortId, zenoh_flow::Token>> for Tokens {
+    fn from(rust_tokens: HashMap<zenoh_flow::PortId, zenoh_flow::Token>) -> Self {
+        let mut tokens = HashMap::new();
+
+        for (id, t) in rust_tokens {
+            tokens.insert(id.as_ref().clone().into(), Token::from(t));
+        }
+
+        Self { tokens }
+    }
+}
+
+impl Into<HashMap<zenoh_flow::PortId, zenoh_flow::Token>> for Tokens {
+    fn into(self) -> HashMap<zenoh_flow::PortId, zenoh_flow::Token> {
+        let mut tokens = HashMap::new();
+
+        for (id, t) in self.tokens {
+            tokens.insert(id.into(), t.into());
+        }
+
+        tokens
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct DeadlineMiss {
+    pub(crate) deadline: u128,
+    pub(crate) elapsed: u128,
+}
+
+#[pymethods]
+impl DeadlineMiss {
+    #[getter]
+    fn deadline(&self) -> u128 {
+        self.deadline
+    }
+
+    #[getter]
+    fn elapsed(&self) -> u128 {
+        self.elapsed
+    }
+}
+
+impl From<zenoh_flow::DeadlineMiss> for DeadlineMiss {
+    fn from(deadline_miss: zenoh_flow::DeadlineMiss) -> Self {
+        Self {
+            deadline: deadline_miss.deadline.as_micros(),
+            elapsed: deadline_miss.elapsed.as_micros(),
+        }
+    }
+}
+
+impl From<Option<zenoh_flow::DeadlineMiss>> for DeadlineMiss {
+    fn from(deadline_miss: Option<zenoh_flow::DeadlineMiss>) -> Self {
+        match deadline_miss {
+            Some(dl_miss) => Self {
+                deadline: dl_miss.deadline.as_micros(),
+                elapsed: dl_miss.elapsed.as_micros(),
+            },
+            None => Self {
+                deadline: 0,
+                elapsed: 0,
+            },
+        }
     }
 }

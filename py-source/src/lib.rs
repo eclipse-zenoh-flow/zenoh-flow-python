@@ -6,7 +6,7 @@ use zenoh_flow::async_std::sync::Arc;
 use zenoh_flow::zenoh_flow_derive::ZFState;
 use zenoh_flow::Configuration;
 use zenoh_flow::{Data, Node, Source, State, ZFError, ZFResult};
-use zenoh_flow_python_types::into_py;
+use zenoh_flow_python_types::utils::configuration_into_py;
 use zenoh_flow_python_types::Context as PyContext;
 
 #[derive(ZFState, Clone)]
@@ -29,13 +29,16 @@ struct PySource;
 #[async_trait]
 impl Source for PySource {
     async fn run(&self, ctx: &mut zenoh_flow::Context, state: &mut State) -> ZFResult<Data> {
+        // Preparing python
         let gil = Python::acquire_gil();
         let py = gil.python();
+
+        // Preparing parameter
         let current_state = state.try_get::<PythonState>()?;
         let source_class = current_state.module.as_ref().clone();
-
         let py_ctx = PyContext::from(ctx);
 
+        // Calling python
         let value: Vec<u8> = source_class
             .call_method1(
                 py,
@@ -50,17 +53,22 @@ impl Source for PySource {
             .extract(py)
             .map_err(|e| ZFError::InvalidData(e.to_string()))?;
 
+        // Converting to rust types
         Ok(Data::from_bytes(value))
     }
 }
 
 impl Node for PySource {
     fn initialize(&self, configuration: &Option<Configuration>) -> ZFResult<State> {
+        // Preparing python
         pyo3::prepare_freethreaded_python();
         let gil = Python::acquire_gil();
         let py = gil.python();
+
+        // Configuring wrapper + python source
         match configuration {
             Some(configuration) => {
+                // Unwrapping configuration
                 let script_file_path = Path::new(
                     configuration["python-script"]
                         .as_str()
@@ -70,17 +78,22 @@ impl Node for PySource {
 
                 config["python-script"].take();
                 let py_config = config["configuration"].take();
-                let py_config = into_py(py, py_config);
 
+                // Convert configuration to Python
+                let py_config = configuration_into_py(py, py_config);
+
+                // Load Python code
                 let code = read_file(script_file_path);
                 let module = PyModule::from_code(py, &code, "source.py", "source")
                     .map_err(|e| ZFError::InvalidData(e.to_string()))?;
 
+                // Getting the correct python module
                 let source_class: PyObject = module
                     .call_method0("register")
                     .map_err(|e| ZFError::InvalidData(e.to_string()))?
                     .into();
 
+                // Initialize python state
                 let state: PyObject = source_class
                     .call_method1(py, "initialize", (source_class.clone(), py_config))
                     .map_err(|e| ZFError::InvalidData(e.to_string()))?
