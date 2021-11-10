@@ -9,3 +9,9 @@ edition = "2018"
 zenoh-flow = { git = "https://github.com/eclipse-zenoh/zenoh-flow.git", branch = "master" }
 uhlc = { version = "0.3"}
 pyo3 = "0.14.5"
+
+
+#[lib]
+#name = "zenoh_flow_python_types"
+#crate-type=["dylib"]
+#path="src/lib.rs"

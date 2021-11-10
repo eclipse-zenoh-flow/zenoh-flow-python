@@ -1,3 +1,7 @@
 /target
 /venv
 Cargo.lock
+build/
+dist/
+*.egg-info
+*.so

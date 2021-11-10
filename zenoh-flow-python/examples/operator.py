@@ -12,7 +12,7 @@
 ##   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 ##
 
-from zenoh_flow import Inputs, Operator
+from zenoh_flow import Inputs, Operator, Outputs
 
 class MyState:
     def __init__(self):
@@ -58,7 +58,8 @@ class MyOp(Operator):
         # Computing over the inputs
         int_data = int_from_bytes(data)
         int_data = int_data * 2
-
+        # outputs = ()
+        # outputs.put('Data', int_to_bytes(int_data))
         # Producing the outputs
         outputs = {'Data' : int_to_bytes(int_data)}
         return outputs
