@@ -30,7 +30,8 @@ $ venv/bin/activate
 Build the Python Wheel
 
 ```bash
-(venv) $ cd zenoh-flow-python
+(venv) $ git clone https://github.com/atolab/zenoh-flow-python
+(venv) $ cd zenoh-flow-python/zenoh-flow-python
 (venv) $ pip3 install -r requirements-dev.txt
 (venv) $ python setup.py bdist_wheel
 ...
