@@ -47,8 +47,8 @@ $ pip3 install /path/to/zenoh-flow-python/target/wheels/zenoh_flow_python-0.1.0-
 
 Clone and build the [Zenoh Flow runtime](https://github.com/eclipse-zenoh/zenoh-flow), and then use the provided `py-pipeline.yml` example to run it.
 
-You may need to update the paths in `py-pipeline.yml` file.
+You may need to update the paths in `py-pipeline.yml` file and in `loader-config.yml`.
 
 ```bash
-$ /path/to/zenoh-flow/target/release/runtime -r foo -g ../py-pipeline.yml
+$ /path/to/zenoh-flow-examples/target/release/runtime -r foo -g ../py-pipeline.yml -l ../loader-config.yml
 ```

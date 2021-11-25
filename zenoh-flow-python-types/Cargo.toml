@@ -8,8 +8,12 @@ edition = "2018"
 [dependencies]
 zenoh-flow = { git = "https://github.com/eclipse-zenoh/zenoh-flow.git", branch = "master" }
 uhlc = { version = "0.3"}
-pyo3 = "0.14.5"
+pyo3 = "0.15"
 
+
+[features]
+abi-py36 = ["pyo3/abi3-py36"]
+default = ["abi-py36"]
 
 #[lib]
 #name = "zenoh_flow_python_types"

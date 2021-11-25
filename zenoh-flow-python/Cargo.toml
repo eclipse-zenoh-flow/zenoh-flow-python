@@ -18,7 +18,7 @@ readme = "../README.md"
 [dependencies]
 zenoh-flow-python-types = { path = "../zenoh-flow-python-types"}
 uhlc = { version = "0.3"}
-pyo3 = "0.14.5"
+pyo3 = "0.15"
 
 [features]
 abi-py36 = ["pyo3/abi3-py36"]
