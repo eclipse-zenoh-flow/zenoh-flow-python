@@ -12,10 +12,7 @@
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
 
-use pyo3::{
-    prelude::*,
-    types::{PyModule},
-};
+use pyo3::{prelude::*, types::PyModule};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
@@ -25,13 +22,13 @@ use zenoh_flow::runtime::message::DataMessage;
 use zenoh_flow::zenoh_flow_derive::ZFState;
 use zenoh_flow::Configuration;
 use zenoh_flow::{
-    async_std::sync::Arc, export_operator, types::ZFResult, DeadlineMiss, Node, NodeOutput,
+    async_std::sync::Arc, export_operator, types::ZFResult, LocalDeadlineMiss, Node, NodeOutput,
     Operator, PortId, State, Token,
 };
 use zenoh_flow::{Context, Data, ZFError};
 use zenoh_flow_python_types::utils::{configuration_into_py, outputs_from_py, tokens_into_py};
 use zenoh_flow_python_types::Context as PyContext;
-use zenoh_flow_python_types::DeadlineMiss as PyDeadlineMiss;
+use zenoh_flow_python_types::LocalDeadlineMiss as PyLocalDeadlineMiss;
 use zenoh_flow_python_types::Inputs as PyInputs;
 use zenoh_flow_python_types::Outputs as PyOutputs;
 use zenoh_flow_python_types::Token as PyToken;
@@ -150,7 +147,7 @@ impl Operator for PyOperator {
         ctx: &mut Context,
         state: &mut State,
         outputs: HashMap<PortId, Data>,
-        deadlinemiss: Option<DeadlineMiss>,
+        deadlinemiss: Option<LocalDeadlineMiss>,
     ) -> ZFResult<HashMap<PortId, NodeOutput>> {
         // Preparing python
         let gil = Python::acquire_gil();
@@ -161,7 +158,7 @@ impl Operator for PyOperator {
         let op_class = current_state.module.as_ref().clone();
         let py_ctx = PyContext::from(ctx);
         let py_data = PyOutputs::try_from(outputs)?;
-        let deadline_miss = PyDeadlineMiss::from(deadlinemiss);
+        let deadline_miss = PyLocalDeadlineMiss::from(deadlinemiss);
 
         // Calling pthon code
         let py_values = op_class

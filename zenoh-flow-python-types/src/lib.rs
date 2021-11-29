@@ -13,7 +13,7 @@
 //
 
 use pyo3::prelude::*;
-use pyo3::types::{PyDict};
+use pyo3::types::PyDict;
 use pyo3::PyObjectProtocol;
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -48,6 +48,7 @@ impl From<&mut zenoh_flow::Context> for Context {
 pub struct DataMessage {
     pub(crate) data: Vec<u8>,
     pub(crate) ts: uhlc::Timestamp,
+    pub(crate) missed_end_to_end_deadlines: Vec<E2EDeadlineMiss>,
 }
 
 #[pymethods]
@@ -76,10 +77,17 @@ impl PyObjectProtocol for DataMessage {
 
 impl TryFrom<zenoh_flow::DataMessage> for DataMessage {
     type Error = ZFError;
-    fn try_from(msg: zenoh_flow::DataMessage) -> Result<Self, Self::Error> {
+    fn try_from(mut msg: zenoh_flow::DataMessage) -> Result<Self, Self::Error> {
+        let missed_end_to_end_deadlines: Vec<E2EDeadlineMiss> = msg
+            .get_missed_end_to_end_deadlines()
+            .iter()
+            .map(|e2e_deadline| e2e_deadline.into())
+            .collect();
+
         Ok(Self {
-            ts: msg.timestamp,
-            data: msg.data.try_as_bytes()?.to_vec(),
+            ts: msg.get_timestamp().clone(),
+            data: msg.get_inner_data().try_as_bytes()?.to_vec(),
+            missed_end_to_end_deadlines,
         })
     }
 }
@@ -87,9 +95,16 @@ impl TryFrom<zenoh_flow::DataMessage> for DataMessage {
 impl TryFrom<&mut zenoh_flow::DataMessage> for DataMessage {
     type Error = ZFError;
     fn try_from(msg: &mut zenoh_flow::DataMessage) -> Result<Self, Self::Error> {
+        let missed_end_to_end_deadlines: Vec<E2EDeadlineMiss> = msg
+            .get_missed_end_to_end_deadlines()
+            .iter()
+            .map(|e2e_deadline| e2e_deadline.into())
+            .collect();
+
         Ok(Self {
-            ts: msg.timestamp,
-            data: msg.data.try_as_bytes()?.to_vec(),
+            ts: msg.get_timestamp().clone(),
+            data: msg.get_inner_data().try_as_bytes()?.to_vec(),
+            missed_end_to_end_deadlines,
         })
     }
 }
@@ -342,13 +357,13 @@ impl Into<HashMap<zenoh_flow::PortId, zenoh_flow::Token>> for Tokens {
 
 #[pyclass]
 #[derive(Clone)]
-pub struct DeadlineMiss {
+pub struct LocalDeadlineMiss {
     pub(crate) deadline: u128,
     pub(crate) elapsed: u128,
 }
 
 #[pymethods]
-impl DeadlineMiss {
+impl LocalDeadlineMiss {
     #[getter]
     fn deadline(&self) -> u128 {
         self.deadline
@@ -360,8 +375,8 @@ impl DeadlineMiss {
     }
 }
 
-impl From<zenoh_flow::DeadlineMiss> for DeadlineMiss {
-    fn from(deadline_miss: zenoh_flow::DeadlineMiss) -> Self {
+impl From<zenoh_flow::LocalDeadlineMiss> for LocalDeadlineMiss {
+    fn from(deadline_miss: zenoh_flow::LocalDeadlineMiss) -> Self {
         Self {
             deadline: deadline_miss.deadline.as_micros(),
             elapsed: deadline_miss.elapsed.as_micros(),
@@ -369,8 +384,8 @@ impl From<zenoh_flow::DeadlineMiss> for DeadlineMiss {
     }
 }
 
-impl From<Option<zenoh_flow::DeadlineMiss>> for DeadlineMiss {
-    fn from(deadline_miss: Option<zenoh_flow::DeadlineMiss>) -> Self {
+impl From<Option<zenoh_flow::LocalDeadlineMiss>> for LocalDeadlineMiss {
+    fn from(deadline_miss: Option<zenoh_flow::LocalDeadlineMiss>) -> Self {
         match deadline_miss {
             Some(dl_miss) => Self {
                 deadline: dl_miss.deadline.as_micros(),
@@ -380,6 +395,98 @@ impl From<Option<zenoh_flow::DeadlineMiss>> for DeadlineMiss {
                 deadline: 0,
                 elapsed: 0,
             },
+        }
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct FromDescriptor {
+    pub node: String,
+    pub output: String,
+}
+
+#[pymethods]
+impl FromDescriptor {
+    #[getter]
+    fn node(&self) -> &str {
+        &self.node
+    }
+
+    #[getter]
+    fn output(&self) -> &str {
+        &self.output
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct ToDescriptor {
+    pub node: String,
+    pub input: String,
+}
+
+#[pymethods]
+impl ToDescriptor {
+    #[getter]
+    fn node(&self) -> &str {
+        &self.node
+    }
+
+    #[getter]
+    fn input(&self) -> &str {
+        &self.input
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct E2EDeadlineMiss {
+    pub from: FromDescriptor,
+    pub to: ToDescriptor,
+    pub start: u64,
+    pub end: u64,
+}
+
+#[pymethods]
+impl E2EDeadlineMiss {
+    #[getter]
+    fn from(&self) -> FromDescriptor {
+        self.from.clone()
+    }
+
+    #[getter]
+    fn to(&self) -> ToDescriptor {
+        self.to.clone()
+    }
+
+    #[getter]
+    fn start(&self) -> u64 {
+        self.start
+    }
+
+    #[getter]
+    fn end(&self) -> u64 {
+        self.end
+    }
+}
+
+impl From<&zenoh_flow::runtime::deadline::E2EDeadlineMiss> for E2EDeadlineMiss {
+    fn from(e2d_deadline_miss: &zenoh_flow::runtime::deadline::E2EDeadlineMiss) -> Self {
+        let to = ToDescriptor {
+            node: e2d_deadline_miss.to.node.as_ref().clone().into(),
+            input: e2d_deadline_miss.to.input.as_ref().clone().into(),
+        };
+        let from = FromDescriptor {
+            node: e2d_deadline_miss.from.node.as_ref().clone().into(),
+            output: e2d_deadline_miss.from.output.as_ref().clone().into(),
+        };
+
+        Self {
+            from,
+            to,
+            start: e2d_deadline_miss.start.get_time().as_u64(),
+            end: e2d_deadline_miss.end.get_time().as_u64(),
         }
     }
 }
