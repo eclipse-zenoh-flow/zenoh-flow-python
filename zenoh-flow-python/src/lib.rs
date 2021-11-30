@@ -15,7 +15,9 @@
 use pyo3::types::PyDict;
 use pyo3::{prelude::*, types::PyModule};
 use std::collections::HashMap;
-pub use zenoh_flow_python_types::{Context, LocalDeadlineMiss, Inputs, Outputs, Token};
+pub use zenoh_flow_python_types::{
+    Context, DataMessage, Inputs, LocalDeadlineMiss, Outputs, Token,
+};
 
 #[pyclass(subclass)]
 pub struct Source {}
@@ -56,7 +58,7 @@ impl Sink {
         Self {}
     }
 
-    fn run(&self, _context: &mut Context, _state: Py<PyAny>, _input: Vec<u8>) -> PyResult<()> {
+    fn run(&self, _context: &mut Context, _state: Py<PyAny>, _input: DataMessage) -> PyResult<()> {
         Err(pyo3::exceptions::PyNotImplementedError::new_err(
             "Not implemented",
         ))

@@ -28,8 +28,8 @@ use zenoh_flow::{
 use zenoh_flow::{Context, Data, ZFError};
 use zenoh_flow_python_types::utils::{configuration_into_py, outputs_from_py, tokens_into_py};
 use zenoh_flow_python_types::Context as PyContext;
-use zenoh_flow_python_types::LocalDeadlineMiss as PyLocalDeadlineMiss;
 use zenoh_flow_python_types::Inputs as PyInputs;
+use zenoh_flow_python_types::LocalDeadlineMiss as PyLocalDeadlineMiss;
 use zenoh_flow_python_types::Outputs as PyOutputs;
 use zenoh_flow_python_types::Token as PyToken;
 
