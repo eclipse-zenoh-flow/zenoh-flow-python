@@ -17,7 +17,7 @@ readme = "../README.md"
 
 [dependencies]
 zenoh-flow-python-types = { path = "../zenoh-flow-python-types"}
-uhlc = { version = "0.3"}
+uhlc = "0.4"
 pyo3 = "0.15"
 
 [features]

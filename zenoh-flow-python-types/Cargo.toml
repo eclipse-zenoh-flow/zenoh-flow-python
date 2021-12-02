@@ -7,7 +7,7 @@ edition = "2018"
 
 [dependencies]
 zenoh-flow = { git = "https://github.com/eclipse-zenoh/zenoh-flow.git", branch = "master" }
-uhlc = { version = "0.3"}
+uhlc = "0.4"
 pyo3 = "0.15"
 
 
