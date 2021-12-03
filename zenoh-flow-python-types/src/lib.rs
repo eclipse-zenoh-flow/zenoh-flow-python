@@ -62,6 +62,11 @@ impl DataMessage {
     fn data(&self) -> &[u8] {
         &self.data
     }
+
+    #[getter]
+    fn missed_end_to_end_deadlines(&self) -> Vec<E2EDeadlineMiss> {
+        self.missed_end_to_end_deadlines.clone()
+    }
 }
 
 #[pyproto]
@@ -291,6 +296,20 @@ impl Token {
         match &self.token {
             zenoh_flow::Token::Ready(ref r) => r.get_action().to_string(),
             _ => String::from("Pending"),
+        }
+    }
+
+    pub fn is_ready(&self) -> bool {
+        match &self.token {
+            zenoh_flow::Token::Ready(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_pending(&self) -> bool {
+        match &self.token {
+            zenoh_flow::Token::Pending => true,
+            _ => false,
         }
     }
 }
