@@ -130,7 +130,7 @@ zenoh_flow::export_source!(register);
 fn load_self() -> ZFResult<Library> {
     // Very dirty hack!
     let lib_name = libloading::library_filename(PY_LIB);
-
+    println!("Loading {}", lib_name);
     unsafe {
         #[cfg(target_family = "unix")]
         let lib = Library::open(Some(lib_name), LOAD_FLAGS)?;
