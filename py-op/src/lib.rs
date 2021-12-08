@@ -40,7 +40,7 @@ use libloading::Library;
 
 #[cfg(target_family = "unix")]
 static LOAD_FLAGS: std::os::raw::c_int =
-    libloading::os::unix::RTLD_NOW | libloading::os::unix::RTLD_LOCAL;
+    libloading::os::unix::RTLD_NOW | libloading::os::unix::RTLD_GLOBAL;
 
 pub static PY_LIB: &str = env!("PY_LIB");
 
@@ -260,7 +260,6 @@ export_operator!(register);
 fn load_self() -> ZFResult<Library> {
     // Very dirty hack!
     let lib_name = libloading::library_filename(PY_LIB);
-
     unsafe {
         #[cfg(target_family = "unix")]
         let lib = Library::open(Some(lib_name), LOAD_FLAGS)?;

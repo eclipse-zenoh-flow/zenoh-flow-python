@@ -25,7 +25,7 @@ pub use zenoh_flow_python_types::{
 // use libloading::Library;
 
 // #[cfg(target_family = "unix")]
-// static LOAD_FLAGS : std::os::raw::c_int =  libloading::os::unix::RTLD_NOW | libloading::os::unix::RTLD_LOCAL;
+// static LOAD_FLAGS : std::os::raw::c_int =  libloading::os::unix::RTLD_NOW | libloading::os::unix::RTLD_GLOBAL;
 
 #[pyclass(subclass)]
 pub struct Source {}
