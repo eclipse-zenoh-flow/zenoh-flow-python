@@ -19,6 +19,14 @@ pub use zenoh_flow_python_types::{
     Context, DataMessage, Inputs, LocalDeadlineMiss, Outputs, Token,
 };
 
+// #[cfg(target_family = "unix")]
+// use libloading::os::unix::Library;
+// #[cfg(target_family = "windows")]
+// use libloading::Library;
+
+// #[cfg(target_family = "unix")]
+// static LOAD_FLAGS : std::os::raw::c_int =  libloading::os::unix::RTLD_NOW | libloading::os::unix::RTLD_LOCAL;
+
 #[pyclass(subclass)]
 pub struct Source {}
 
@@ -134,6 +142,25 @@ impl Operator {
     }
 }
 
+// fn load_self() -> PyResult<Library> {
+//     unsafe {
+//         #[cfg(target_family = "unix")]
+//         let lib  = Library::open(None::<&std::ffi::OsStr>, LOAD_FLAGS).map_err(|e| pyo3::exceptions::PyValueError::new_err(
+//             format!("Loading error {:?}", e),
+//         ))?;
+
+//         #[cfg(target_family = "windows")]
+//         let lib = Library::new(path).map_err(|e| pyo3::exceptions::PyValueError::new_err(
+//             format!("Loading error {:?}", e),
+//         ))?;
+
+//         Ok(lib)
+//     }
+// }
+
+// #[pyclass(subclass)]
+// pub struct SelfLib(Library);
+
 #[pymodule]
 fn zenoh_flow(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Source>()?;
@@ -142,6 +169,8 @@ fn zenoh_flow(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Inputs>()?;
     m.add_class::<Outputs>()?;
     m.add_class::<Context>()?;
+
+    // m.add("lib", SelfLib(load_self()?))?;
 
     Ok(())
 }
