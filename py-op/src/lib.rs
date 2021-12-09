@@ -33,6 +33,17 @@ use zenoh_flow_python_types::LocalDeadlineMiss as PyLocalDeadlineMiss;
 use zenoh_flow_python_types::Outputs as PyOutputs;
 use zenoh_flow_python_types::Token as PyToken;
 
+#[cfg(target_family = "unix")]
+use libloading::os::unix::Library;
+#[cfg(target_family = "windows")]
+use libloading::Library;
+
+#[cfg(target_family = "unix")]
+static LOAD_FLAGS: std::os::raw::c_int =
+    libloading::os::unix::RTLD_NOW | libloading::os::unix::RTLD_GLOBAL;
+
+pub static PY_LIB: &str = env!("PY_LIB");
+
 #[derive(ZFState, Clone)]
 struct PythonState {
     pub module: Arc<PyObject>,
@@ -47,7 +58,7 @@ impl std::fmt::Debug for PythonState {
     }
 }
 
-struct PyOperator;
+struct PyOperator(Library);
 
 impl Operator for PyOperator {
     fn input_rule(
@@ -246,8 +257,24 @@ impl Node for PyOperator {
 
 export_operator!(register);
 
+fn load_self() -> ZFResult<Library> {
+    // Very dirty hack!
+    let lib_name = libloading::library_filename(PY_LIB);
+    unsafe {
+        #[cfg(target_family = "unix")]
+        let lib = Library::open(Some(lib_name), LOAD_FLAGS)?;
+
+        #[cfg(target_family = "windows")]
+        let lib = Library::new(lib_name)?;
+
+        Ok(lib)
+    }
+}
+
 fn register() -> ZFResult<Arc<dyn Operator>> {
-    Ok(Arc::new(PyOperator) as Arc<dyn Operator>)
+    let library = load_self()?;
+
+    Ok(Arc::new(PyOperator(library)) as Arc<dyn Operator>)
 }
 
 fn read_file(path: &Path) -> String {

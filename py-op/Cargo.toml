@@ -18,8 +18,12 @@ readme = "README.md"
 zenoh-flow = { git = "https://github.com/eclipse-zenoh/zenoh-flow.git", branch = "master"}
 zenoh-flow-python-types = {path = "../zenoh-flow-python-types/"}
 pyo3 = "0.15"
-log = "0.4"
 
+log = "0.4"
+libloading = "0.7"
+
+[build-dependencies]
+pyo3-build-config = {version = "0.15", features = ["resolve-config"]}
 
 [features]
 abi-py36 = ["pyo3/abi3-py36"]
