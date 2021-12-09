@@ -59,5 +59,5 @@ Clone and build the [Zenoh Flow runtime](https://github.com/atolab/zenoh-flow-ex
 You may need to update the paths in `py-pipeline.yml` file.
 
 ```bash
-$ /path/to/zenoh-flow/target/release/runtime -r foo -g ../py-pipeline.yml -l loader-config.yml
+$ /path/to/zenoh-flow-examples/target/release/runtime -r foo -g py-pipeline.yml -l loader-config.yml
 ```
