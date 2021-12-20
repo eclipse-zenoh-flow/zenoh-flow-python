@@ -27,9 +27,11 @@ $ python3 -m venv venv
 $ venv/bin/activate
 ```
 
-Build the Python Wheel
+Build the Python Wheel **within** a Python virtual environment.
 
 ```bash
+$ python3 -m venv venv
+$ source venv/bin/activate
 (venv) $ git clone https://github.com/atolab/zenoh-flow-python
 (venv) $ cd zenoh-flow-python/zenoh-flow-python
 (venv) $ pip3 install -r requirements-dev.txt
@@ -38,15 +40,18 @@ Build the Python Wheel
 📦 Built wheel for abi3 Python ≥ 3.6 to /path/to/zenoh-flow-python/target/wheels/zenoh_flow_python-0.1.0-cp36-abi3-macosx_10_7_x86_64.whl
 ```
 
-On a separate terminal install the wheel.
+**Deactivate** the venv and install the python bindings.
 
 ```bash
-$ pip3 install /path/to/zenoh-flow-python/target/wheels/zenoh_flow_python-0.1.0-cp36-abi3-macosx_10_7_x86_64.whl
+(venv) deactivate
+$ pip3 install ./dist/*.whl
 ```
 
 #### Build the wrappers
 
-Build the Python wrappers
+Build the Python wrappers.
+
+:warning: **Python Wrappers SHOULD NOT be built within a Python virtual environment**
 
 ```bash
 $ cargo build --release -p py-op -p py-sink -p py-source
@@ -59,5 +64,5 @@ Clone and build the [Zenoh Flow runtime](https://github.com/atolab/zenoh-flow-ex
 You may need to update the paths in `py-pipeline.yml` file.
 
 ```bash
-$ /path/to/zenoh-flow-examples/target/release/runtime -r foo -g py-pipeline.yml -l loader-config.yml
+$ ../zenoh-flow-examples/target/release/runtime -r foo -g py-pipeline.yml -l loader-config.yml
 ```

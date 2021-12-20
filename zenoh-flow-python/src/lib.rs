@@ -143,6 +143,5 @@ fn zenoh_flow(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Outputs>()?;
     m.add_class::<Context>()?;
 
-
     Ok(())
 }
