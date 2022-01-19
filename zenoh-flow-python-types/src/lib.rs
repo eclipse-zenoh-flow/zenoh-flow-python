@@ -241,43 +241,34 @@ impl TryInto<HashMap<zenoh_flow::PortId, zenoh_flow::Data>> for Outputs {
 
 #[pyclass]
 #[derive(Clone, Debug)]
-pub struct Token {
-    pub(crate) token: zenoh_flow::Token,
+pub struct InputToken {
+    pub(crate) token: zenoh_flow::InputToken,
 }
 
 #[pymethods]
-impl Token {
+impl InputToken {
     pub fn set_action_drop(&mut self) {
-        match &mut self.token {
-            zenoh_flow::Token::Ready(ref mut r) => r.set_action_drop(),
-            _ => (),
-        }
+        self.token.set_action_drop()
     }
 
     pub fn set_action_keep(&mut self) {
-        match &mut self.token {
-            zenoh_flow::Token::Ready(ref mut r) => r.set_action_keep(),
-            _ => (),
-        }
+        self.token.set_action_keep()
     }
 
     pub fn set_action_consume(&mut self) {
-        match &mut self.token {
-            zenoh_flow::Token::Ready(ref mut r) => r.set_action_consume(),
-            _ => (),
-        }
+        self.token.set_action_consume()
     }
 
     pub fn get_timestamp(&self) -> String {
         match &self.token {
-            zenoh_flow::Token::Ready(ref r) => r.get_timestamp().to_string(),
+            zenoh_flow::InputToken::Ready(ref r) => r.get_timestamp().to_string(),
             _ => String::from(""),
         }
     }
 
     pub fn get_data(&mut self) -> PyResult<Vec<u8>> {
         match &mut self.token {
-            zenoh_flow::Token::Ready(ref mut r) => {
+            zenoh_flow::InputToken::Ready(ref mut r) => {
                 let data = r.get_data_mut();
                 Ok(data
                     .try_as_bytes()
@@ -294,47 +285,47 @@ impl Token {
 
     pub fn get_action(&self) -> String {
         match &self.token {
-            zenoh_flow::Token::Ready(ref r) => r.get_action().to_string(),
+            zenoh_flow::InputToken::Ready(ref r) => r.get_action().to_string(),
             _ => String::from("Pending"),
         }
     }
 
     pub fn is_ready(&self) -> bool {
         match &self.token {
-            zenoh_flow::Token::Ready(_) => true,
+            zenoh_flow::InputToken::Ready(_) => true,
             _ => false,
         }
     }
 
     pub fn is_pending(&self) -> bool {
         match &self.token {
-            zenoh_flow::Token::Pending => true,
+            zenoh_flow::InputToken::Pending => true,
             _ => false,
         }
     }
 }
 
-impl From<zenoh_flow::Token> for Token {
-    fn from(token: zenoh_flow::Token) -> Self {
+impl From<zenoh_flow::InputToken> for InputToken {
+    fn from(token: zenoh_flow::InputToken) -> Self {
         Self { token }
     }
 }
 
-impl Into<zenoh_flow::Token> for Token {
-    fn into(self) -> zenoh_flow::Token {
+impl Into<zenoh_flow::InputToken> for InputToken {
+    fn into(self) -> zenoh_flow::InputToken {
         self.token
     }
 }
 
 #[pyclass]
 #[derive(Clone, Debug)]
-pub struct Tokens {
-    pub(crate) tokens: HashMap<String, Token>,
+pub struct InputTokens {
+    pub(crate) tokens: HashMap<String, InputToken>,
 }
 
 #[pymethods]
-impl Tokens {
-    pub fn get(&mut self, port_id: String) -> PyResult<Token> {
+impl InputTokens {
+    pub fn get(&mut self, port_id: String) -> PyResult<InputToken> {
         match self.tokens.get(&port_id) {
             Some(t) => Ok(t.clone()),
             None => Err(pyo3::exceptions::PyValueError::new_err(
@@ -344,26 +335,26 @@ impl Tokens {
     }
 }
 
-// impl From<zenoh_flow::Tokens> for Tokens {
-//     fn from(tokens: zenoh_flow::Tokens) -> Self {
+// impl From<zenoh_flow::InputTokens> for Tokens {
+//     fn from(tokens: zenoh_flow::InputTokens) -> Self {
 //         Self { tokens }
 //     }
 // }
 
-impl From<HashMap<zenoh_flow::PortId, zenoh_flow::Token>> for Tokens {
-    fn from(rust_tokens: HashMap<zenoh_flow::PortId, zenoh_flow::Token>) -> Self {
+impl From<HashMap<zenoh_flow::PortId, zenoh_flow::InputToken>> for InputTokens {
+    fn from(rust_tokens: HashMap<zenoh_flow::PortId, zenoh_flow::InputToken>) -> Self {
         let mut tokens = HashMap::new();
 
         for (id, t) in rust_tokens {
-            tokens.insert(id.as_ref().clone().into(), Token::from(t));
+            tokens.insert(id.as_ref().clone().into(), InputToken::from(t));
         }
 
         Self { tokens }
     }
 }
 
-impl Into<HashMap<zenoh_flow::PortId, zenoh_flow::Token>> for Tokens {
-    fn into(self) -> HashMap<zenoh_flow::PortId, zenoh_flow::Token> {
+impl Into<HashMap<zenoh_flow::PortId, zenoh_flow::InputToken>> for InputTokens {
+    fn into(self) -> HashMap<zenoh_flow::PortId, zenoh_flow::InputToken> {
         let mut tokens = HashMap::new();
 
         for (id, t) in self.tokens {

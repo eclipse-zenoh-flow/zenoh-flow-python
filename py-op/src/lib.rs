@@ -23,7 +23,7 @@ use zenoh_flow::zenoh_flow_derive::ZFState;
 use zenoh_flow::Configuration;
 use zenoh_flow::{
     async_std::sync::Arc, export_operator, types::ZFResult, LocalDeadlineMiss, Node, NodeOutput,
-    Operator, PortId, State, Token,
+    Operator, PortId, State, InputToken,
 };
 use zenoh_flow::{Context, Data, ZFError};
 use zenoh_flow_python_types::utils::{configuration_into_py, outputs_from_py, tokens_into_py};
@@ -31,7 +31,7 @@ use zenoh_flow_python_types::Context as PyContext;
 use zenoh_flow_python_types::Inputs as PyInputs;
 use zenoh_flow_python_types::LocalDeadlineMiss as PyLocalDeadlineMiss;
 use zenoh_flow_python_types::Outputs as PyOutputs;
-use zenoh_flow_python_types::Token as PyToken;
+use zenoh_flow_python_types::InputToken as PyToken;
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -65,7 +65,7 @@ impl Operator for PyOperator {
         &self,
         ctx: &mut Context,
         state: &mut State,
-        tokens: &mut HashMap<PortId, Token>,
+        tokens: &mut HashMap<PortId, InputToken>,
     ) -> ZFResult<bool> {
         // Getting tokens for conversion to Python
         let real_tokens = std::mem::replace(tokens, HashMap::new());

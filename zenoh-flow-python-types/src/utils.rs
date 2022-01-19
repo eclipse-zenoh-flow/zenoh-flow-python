@@ -12,7 +12,7 @@
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
 
-use crate::{Outputs, Token};
+use crate::{Outputs, InputToken};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use std::collections::HashMap;
@@ -44,12 +44,12 @@ pub fn configuration_into_py(py: Python, value: zenoh_flow::Configuration) -> Py
 
 pub fn tokens_into_py(
     py: Python,
-    rust_tokens: HashMap<zenoh_flow::PortId, zenoh_flow::Token>,
+    rust_tokens: HashMap<zenoh_flow::PortId, zenoh_flow::InputToken>,
 ) -> PyObject {
-    let mut tokens: HashMap<String, Token> = HashMap::new();
+    let mut tokens: HashMap<String, InputToken> = HashMap::new();
 
     for (id, t) in rust_tokens {
-        tokens.insert(id.as_ref().clone().into(), Token::from(t));
+        tokens.insert(id.as_ref().clone().into(), InputToken::from(t));
     }
 
     tokens.into_py(py)
