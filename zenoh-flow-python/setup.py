@@ -29,7 +29,7 @@ def readme():
 
 setup(
     name="eclipse-zenoh-flow",
-    version="0.1.0",
+    version="0.2.0",
     description="The python API for Eclipse zenoh flow",
     long_description=readme(),
     long_description_content_type='text/markdown',
