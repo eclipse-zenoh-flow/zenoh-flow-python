@@ -1,6 +1,6 @@
 [package]
 name = "zenoh-flow-python"
-version = "0.1.0"
+version = "0.2.0"
 repository = "https://github.com/atolab/zenoh-flow-python"
 homepage = "http://zenoh.io"
 authors = ["kydos <angelo@icorsaro.net>",

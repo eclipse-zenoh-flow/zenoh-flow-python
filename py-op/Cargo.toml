@@ -1,6 +1,6 @@
 [package]
 name = "py-op"
-version = "0.1.0"
+version = "0.2.0"
 repository = "https://github.com/atolab/zenoh-flow-examples"
 homepage = "http://zenoh.io"
 authors = ["kydos <angelo@icorsaro.net>",
@@ -15,7 +15,7 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-zenoh-flow = { git = "https://github.com/eclipse-zenoh/zenoh-flow.git", branch = "master"}
+zenoh-flow = { git = "https://github.com/eclipse-zenoh/zenoh-flow.git", tag = "0.2.0"}
 zenoh-flow-python-types = {path = "../zenoh-flow-python-types/"}
 pyo3 = "0.15"
 
