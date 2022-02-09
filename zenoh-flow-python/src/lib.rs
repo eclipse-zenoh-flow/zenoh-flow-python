@@ -32,6 +32,7 @@ impl Source {
     /// The run method is called by the zenoh flow runtime.
     /// This method is expected to produce data whenever it is called.
     /// Any source has to implement this method.
+    ///
     /// :rtype: bytes
     fn run(&self, _state: Py<PyAny>) -> PyResult<Vec<u8>> {
         Err(pyo3::exceptions::PyNotImplementedError::new_err(
@@ -48,6 +49,7 @@ impl Source {
     ///
     /// :param configuration: Configuration
     /// :type configuraion: dict
+    ///
     /// :rtype: any
     fn initialize(&self, _configuration: Option<PyObject>) -> PyResult<Py<PyAny>> {
         Err(pyo3::exceptions::PyNotImplementedError::new_err(
@@ -62,6 +64,8 @@ impl Source {
     /// for the source (e.g. close files)
     /// It should destroy the state.
     ///
+    /// :param state: Source state
+    /// :type state: any
     fn finalize(&self, _state: Py<PyAny>) -> PyResult<()> {
         Err(pyo3::exceptions::PyNotImplementedError::new_err(
             "Not implemented",
@@ -83,6 +87,7 @@ impl Sink {
     /// The run method is called by the Zenoh Flow runtime.
     /// Any sink has to implement this method.
     /// This method is called when data is received from the input.
+    ///
     /// :param context: The Sink context
     /// :type context: :class:`Context`
     /// :param state: The sink state
@@ -106,6 +111,7 @@ impl Sink {
     ///
     /// :param configuration: Configuration
     /// :type configuraion: dict
+    ///
     /// :rtype: any
     fn initialize(&self, _configuration: Option<PyObject>) -> PyResult<Py<PyAny>> {
         Err(pyo3::exceptions::PyNotImplementedError::new_err(
@@ -119,6 +125,9 @@ impl Sink {
     /// This method is use to finalize any state that can be useful
     /// for the sink (e.g. close files)
     /// It should destroy the state.
+    ///
+    /// :param state: Sink state
+    /// :type state: any
     ///
     fn finalize(&self, _state: Py<PyAny>) -> PyResult<()> {
         Err(pyo3::exceptions::PyNotImplementedError::new_err(
@@ -190,6 +199,7 @@ impl Operator {
     /// The output_rule method is called by the zenoh flow runtime.
     /// This method is called when data is produced from the run.
     /// Any operator has to implement this method.
+    ///
     /// :param context: The operator context
     /// :type context: :class:`Context`
     /// :param state: The source state
@@ -221,6 +231,7 @@ impl Operator {
     ///
     /// :param configuration: Configuration
     /// :type configuraion: dict
+    ///
     /// :rtype: any
     fn initialize(&self, _configuration: Option<PyObject>) -> PyResult<Py<PyAny>> {
         Err(pyo3::exceptions::PyNotImplementedError::new_err(
@@ -235,6 +246,8 @@ impl Operator {
     /// for the operator (e.g. configuration)
     /// It should destroy the state.
     ///
+    ///  :param state: Sink state
+    /// :type state: any
     fn finalize(&self, _state: Py<PyAny>) -> PyResult<()> {
         Err(pyo3::exceptions::PyNotImplementedError::new_err(
             "Not implemented",
@@ -361,8 +374,6 @@ impl Operator {
 /// def register():
 ///     return MyOp
 /// """"""""""""
-///
-
 #[pymodule]
 fn zenoh_flow(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Source>()?;
@@ -371,6 +382,9 @@ fn zenoh_flow(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Inputs>()?;
     m.add_class::<Outputs>()?;
     m.add_class::<Context>()?;
+    m.add_class::<LocalDeadlineMiss>()?;
+    m.add_class::<InputToken>()?;
+    m.add_class::<DataMessage>()?;
 
     Ok(())
 }

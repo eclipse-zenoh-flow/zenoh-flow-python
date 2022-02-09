@@ -33,6 +33,7 @@ pub struct Context {
 #[pymethods]
 impl Context {
     /// Gets the mode from the :class:`Context`
+    ///
     /// :rtype: int
     #[getter]
     fn mode(&self) -> usize {
@@ -64,6 +65,7 @@ pub struct DataMessage {
 #[pymethods]
 impl DataMessage {
     /// Gets the timestamp from the :class:`Data Message`
+    ///
     /// :rtype: str
     #[getter]
     fn timestamp(&self) -> String {
@@ -71,6 +73,7 @@ impl DataMessage {
     }
 
     /// Gets the data from the :class:`Data Message`
+    ///
     /// :rtype: bytes
     #[getter]
     fn data(&self) -> &[u8] {
@@ -78,6 +81,7 @@ impl DataMessage {
     }
 
     /// Gets the missed end to end deadlines from the :class:`Data Message`
+    ///
     /// :rtype: list[`E2EDeadlineMiss`]
     #[getter]
     fn missed_end_to_end_deadlines(&self) -> Vec<E2EDeadlineMiss> {
@@ -140,6 +144,7 @@ pub struct Inputs {
 #[pymethods]
 impl Inputs {
     /// Gets the :class:`DataMessage` from the :class:`Inputs`
+    ///
     /// :param id: The ID of the input port.
     /// :type id: str
     ///
@@ -194,6 +199,7 @@ impl Outputs {
         }
     }
     /// Adds a value to the :class:`Outputs`
+    ///
     /// :param id: the ID of the output port
     /// :type id: str
     /// :param data: The data
@@ -203,7 +209,8 @@ impl Outputs {
         self.outputs.insert(id, data);
     }
 
-    /// Gets the data from the :class:`Outputs`
+    /// Gets the data from the :class:`Outputs
+    /// `
     /// :param id: The ID of the output port.
     /// :type id: str
     ///
@@ -304,6 +311,7 @@ impl InputToken {
     }
 
     /// Gets the timestamp from the :class:`Token`.
+    ///
     /// :rtype: str
     pub fn get_timestamp(&self) -> String {
         match &self.token {
@@ -313,6 +321,7 @@ impl InputToken {
     }
 
     /// Gets the data from the :class:`Token`
+    ///
     /// :rtype: bytes
     pub fn get_data(&mut self) -> PyResult<Vec<u8>> {
         match &mut self.token {
@@ -332,6 +341,7 @@ impl InputToken {
     }
 
     /// Gets the action from the :class:`Token`
+    ///
     /// :rtype: str
     pub fn get_action(&self) -> String {
         match &self.token {
@@ -342,6 +352,7 @@ impl InputToken {
 
     /// Checks if the :class:`Token` is ready.
     /// i.e. has Data.
+    ///
     /// :rtype: bool
     pub fn is_ready(&self) -> bool {
         match &self.token {
@@ -352,6 +363,7 @@ impl InputToken {
 
     /// Checks if the :class:`Token` is pending.
     /// i.e. has no data.
+    ///
     /// :rtype: bool
     pub fn is_pending(&self) -> bool {
         match &self.token {
@@ -383,6 +395,7 @@ pub struct InputTokens {
 #[pymethods]
 impl InputTokens {
     /// Gets the :class:`InputToken` for the given port ID.
+    ///
     /// :param port_id: The input port ID.
     /// :type port_id: str
     ///
@@ -444,6 +457,7 @@ pub struct LocalDeadlineMiss {
 #[pymethods]
 impl LocalDeadlineMiss {
     /// Gets the deadline.
+    ///
     /// :rtype: int
     #[getter]
     fn deadline(&self) -> u128 {
@@ -451,6 +465,7 @@ impl LocalDeadlineMiss {
     }
 
     /// Gets the elapsed time.
+    ///
     /// :rtype: int
     #[getter]
     fn elapsed(&self) -> u128 {
@@ -494,6 +509,7 @@ pub struct FromDescriptor {
 #[pymethods]
 impl FromDescriptor {
     /// Gets the node ID from :class:`FromDescriptor`
+    ///
     /// :rtype: str
     #[getter]
     fn node(&self) -> &str {
@@ -501,6 +517,7 @@ impl FromDescriptor {
     }
 
     /// Gets the port ID from :class:`FromDescriptor`
+    ///
     /// :rtype: str
     #[getter]
     fn output(&self) -> &str {
@@ -520,6 +537,7 @@ pub struct ToDescriptor {
 #[pymethods]
 impl ToDescriptor {
     /// Gets the node ID from :class:`ToDescriptor`
+    ///
     /// :rtype: str
     #[getter]
     fn node(&self) -> &str {
@@ -527,6 +545,7 @@ impl ToDescriptor {
     }
 
     /// Gets the port ID from :class:`ToDescriptor`
+    ///
     /// :rtype: str
     #[getter]
     fn input(&self) -> &str {
@@ -548,6 +567,7 @@ pub struct E2EDeadlineMiss {
 #[pymethods]
 impl E2EDeadlineMiss {
     /// Gets from where the deadline starts.
+    ///
     /// :rtype: :class:`FromDescriptor`
     #[getter]
     fn from(&self) -> FromDescriptor {
@@ -555,6 +575,7 @@ impl E2EDeadlineMiss {
     }
 
     /// Gets where the deadline ends.
+    ///
     /// :rtype: :class:`ToDescriptor`
     #[getter]
     fn to(&self) -> ToDescriptor {
@@ -568,6 +589,7 @@ impl E2EDeadlineMiss {
         self.start
     }
     /// Gets the end time of the deadline.
+    ///
     /// :rtype: int
     #[getter]
     fn end(&self) -> u64 {
