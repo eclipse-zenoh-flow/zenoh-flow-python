@@ -22,16 +22,16 @@ use zenoh_flow::runtime::message::DataMessage;
 use zenoh_flow::zenoh_flow_derive::ZFState;
 use zenoh_flow::Configuration;
 use zenoh_flow::{
-    async_std::sync::Arc, export_operator, types::ZFResult, LocalDeadlineMiss, Node, NodeOutput,
-    Operator, PortId, State, InputToken,
+    async_std::sync::Arc, export_operator, types::ZFResult, InputToken, LocalDeadlineMiss, Node,
+    NodeOutput, Operator, PortId, State,
 };
 use zenoh_flow::{Context, Data, ZFError};
 use zenoh_flow_python_types::utils::{configuration_into_py, outputs_from_py, tokens_into_py};
 use zenoh_flow_python_types::Context as PyContext;
+use zenoh_flow_python_types::InputToken as PyToken;
 use zenoh_flow_python_types::Inputs as PyInputs;
 use zenoh_flow_python_types::LocalDeadlineMiss as PyLocalDeadlineMiss;
 use zenoh_flow_python_types::Outputs as PyOutputs;
-use zenoh_flow_python_types::InputToken as PyToken;
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;

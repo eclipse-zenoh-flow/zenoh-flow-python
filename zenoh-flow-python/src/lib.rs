@@ -16,7 +16,7 @@ use pyo3::types::PyDict;
 use pyo3::{prelude::*, types::PyModule};
 use std::collections::HashMap;
 pub use zenoh_flow_python_types::{
-    Context, DataMessage, Inputs, LocalDeadlineMiss, Outputs, InputToken,
+    Context, DataMessage, InputToken, Inputs, LocalDeadlineMiss, Outputs,
 };
 
 /// The class representing a Zenoh Flow source
@@ -38,7 +38,6 @@ impl Source {
             "Not implemented",
         ))
     }
-
 
     /// The initialize method is called by the zenoh flow runtime.
     /// This method is called when starting the data flow graph.
@@ -80,7 +79,6 @@ impl Sink {
     fn new() -> Self {
         Self {}
     }
-
 
     /// The run method is called by the Zenoh Flow runtime.
     /// Any sink has to implement this method.
@@ -248,10 +246,18 @@ impl Operator {
 ///
 /// This API it's NOT meant to be used directly, instead your operators, sink
 /// and sources have to implement the methods provided by the different classes.
+/// A .py can contain only one graph node.
+/// Each .py needs to contain a register function that takes no parameter
+/// and returns the node.
+///
+/// def register():
+///     return MyGraphNode
 ///
 ///
-/// Examples
-/// ~~~~~~~
+/// Below some examples for simple source, sink and operator.
+///
+/// Examples:
+/// ~~~~~~~~
 ///
 ///
 /// Source:
@@ -356,7 +362,6 @@ impl Operator {
 ///     return MyOp
 /// """"""""""""
 ///
-
 
 #[pymodule]
 fn zenoh_flow(_py: Python, m: &PyModule) -> PyResult<()> {

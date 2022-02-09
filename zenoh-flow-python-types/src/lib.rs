@@ -22,8 +22,6 @@ use zenoh_flow::ZFError;
 
 pub mod utils;
 
-
-
 /// A Zenoh Flow context.
 /// Zenoh Flow context contains a `mode` that represent
 /// the current execution mode for the operator.
@@ -49,7 +47,6 @@ impl From<&mut zenoh_flow::Context> for Context {
         }
     }
 }
-
 
 /// A Zenoh Flow Data Message.
 /// It contains:
@@ -133,7 +130,6 @@ impl TryFrom<&mut zenoh_flow::DataMessage> for DataMessage {
     }
 }
 
-
 /// The inputs received in the Operator run function.
 #[pyclass]
 #[derive(Clone)]
@@ -181,7 +177,6 @@ impl TryFrom<&mut HashMap<zenoh_flow::PortId, zenoh_flow::DataMessage>> for Inpu
         Ok(Self { inputs })
     }
 }
-
 
 /// Zenoh Flow outputs, passed to the operator output rules
 #[pyclass]
@@ -284,7 +279,6 @@ impl TryInto<HashMap<zenoh_flow::PortId, zenoh_flow::Data>> for Outputs {
     }
 }
 
-
 /// A Zenoh Flow Input Token
 #[pyclass]
 #[derive(Clone, Debug)]
@@ -294,7 +288,6 @@ pub struct InputToken {
 
 #[pymethods]
 impl InputToken {
-
     /// Sets the token to be dropped.
     pub fn set_action_drop(&mut self) {
         self.token.set_action_drop()
@@ -318,7 +311,6 @@ impl InputToken {
             _ => String::from(""),
         }
     }
-
 
     /// Gets the data from the :class:`Token`
     /// :rtype: bytes
@@ -381,7 +373,6 @@ impl Into<zenoh_flow::InputToken> for InputToken {
     }
 }
 
-
 /// A set of :class:`InputTokens`
 #[pyclass]
 #[derive(Clone, Debug)]
@@ -436,7 +427,6 @@ impl Into<HashMap<zenoh_flow::PortId, zenoh_flow::InputToken>> for InputTokens {
     }
 }
 
-
 /// A Zenoh Flow local deadline miss.
 /// A structure containing all the information regarding a missed, local, deadline.
 /// A local deadline is represented by a maximum time between receiving the
@@ -453,7 +443,6 @@ pub struct LocalDeadlineMiss {
 
 #[pymethods]
 impl LocalDeadlineMiss {
-
     /// Gets the deadline.
     /// :rtype: int
     #[getter]
@@ -492,7 +481,6 @@ impl From<Option<zenoh_flow::LocalDeadlineMiss>> for LocalDeadlineMiss {
         }
     }
 }
-
 
 /// The descriptor on where an E2E Deadline starts.
 ///
@@ -546,7 +534,6 @@ impl ToDescriptor {
     }
 }
 
-
 /// A End to End Deadline.
 /// A deadline can apply for a whole graph or for a subpart of it.
 #[pyclass]
@@ -566,7 +553,6 @@ impl E2EDeadlineMiss {
     fn from(&self) -> FromDescriptor {
         self.from.clone()
     }
-
 
     /// Gets where the deadline ends.
     /// :rtype: :class:`ToDescriptor`
