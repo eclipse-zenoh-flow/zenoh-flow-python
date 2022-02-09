@@ -22,6 +22,11 @@ use zenoh_flow::ZFError;
 
 pub mod utils;
 
+
+
+/// A Zenoh Flow context.
+/// Zenoh Flow context contains a `mode` that represent
+/// the current execution mode for the operator.
 #[pyclass]
 pub struct Context {
     pub(crate) mode: usize,
@@ -29,6 +34,8 @@ pub struct Context {
 
 #[pymethods]
 impl Context {
+    /// Gets the mode from the :class:`Context`
+    /// :rtype: int
     #[getter]
     fn mode(&self) -> usize {
         self.mode.clone()
@@ -43,6 +50,12 @@ impl From<&mut zenoh_flow::Context> for Context {
     }
 }
 
+
+/// A Zenoh Flow Data Message.
+/// It contains:
+/// `data` as array of bytes.
+/// `ts` an uHLC timestamp associated with the data.
+/// `missed_end_to_end_deadlines` list of `E2EDeadlineMiss`
 #[pyclass]
 #[derive(Clone)]
 pub struct DataMessage {
@@ -53,16 +66,22 @@ pub struct DataMessage {
 
 #[pymethods]
 impl DataMessage {
+    /// Gets the timestamp from the :class:`Data Message`
+    /// :rtype: str
     #[getter]
     fn timestamp(&self) -> String {
         self.ts.to_string()
     }
 
+    /// Gets the data from the :class:`Data Message`
+    /// :rtype: bytes
     #[getter]
     fn data(&self) -> &[u8] {
         &self.data
     }
 
+    /// Gets the missed end to end deadlines from the :class:`Data Message`
+    /// :rtype: list[`E2EDeadlineMiss`]
     #[getter]
     fn missed_end_to_end_deadlines(&self) -> Vec<E2EDeadlineMiss> {
         self.missed_end_to_end_deadlines.clone()
@@ -114,6 +133,8 @@ impl TryFrom<&mut zenoh_flow::DataMessage> for DataMessage {
     }
 }
 
+
+/// The inputs received in the Operator run function.
 #[pyclass]
 #[derive(Clone)]
 pub struct Inputs {
@@ -122,6 +143,11 @@ pub struct Inputs {
 
 #[pymethods]
 impl Inputs {
+    /// Gets the :class:`DataMessage` from the :class:`Inputs`
+    /// :param id: The ID of the input port.
+    /// :type id: str
+    ///
+    /// :rtype: :class:`DataMessage`
     fn get(&self, id: String) -> Option<DataMessage> {
         match self.inputs.get(&id) {
             Some(dm) => Some(dm.clone()),
@@ -156,6 +182,8 @@ impl TryFrom<&mut HashMap<zenoh_flow::PortId, zenoh_flow::DataMessage>> for Inpu
     }
 }
 
+
+/// Zenoh Flow outputs, passed to the operator output rules
 #[pyclass]
 #[derive(Clone)]
 pub struct Outputs {
@@ -170,9 +198,26 @@ impl Outputs {
             outputs: HashMap::new(),
         }
     }
-
+    /// Adds a value to the :class:`Outputs`
+    /// :param id: the ID of the output port
+    /// :type id: str
+    /// :param data: The data
+    /// :type id: bytes
+    ///
     fn put(&mut self, id: String, data: Vec<u8>) -> () {
         self.outputs.insert(id, data);
+    }
+
+    /// Gets the data from the :class:`Outputs`
+    /// :param id: The ID of the output port.
+    /// :type id: str
+    ///
+    /// :rtype: bytes
+    fn get(&self, id: String) -> Option<Vec<u8>> {
+        match self.outputs.get(&id) {
+            Some(d) => Some(d.clone()),
+            None => None,
+        }
     }
 }
 
@@ -239,6 +284,8 @@ impl TryInto<HashMap<zenoh_flow::PortId, zenoh_flow::Data>> for Outputs {
     }
 }
 
+
+/// A Zenoh Flow Input Token
 #[pyclass]
 #[derive(Clone, Debug)]
 pub struct InputToken {
@@ -247,18 +294,24 @@ pub struct InputToken {
 
 #[pymethods]
 impl InputToken {
+
+    /// Sets the token to be dropped.
     pub fn set_action_drop(&mut self) {
         self.token.set_action_drop()
     }
 
+    /// Sets the token to be kept for next iteration.
     pub fn set_action_keep(&mut self) {
         self.token.set_action_keep()
     }
 
+    /// Sets the token to be consumed in the current iteration (default).
     pub fn set_action_consume(&mut self) {
         self.token.set_action_consume()
     }
 
+    /// Gets the timestamp from the :class:`Token`.
+    /// :rtype: str
     pub fn get_timestamp(&self) -> String {
         match &self.token {
             zenoh_flow::InputToken::Ready(ref r) => r.get_timestamp().to_string(),
@@ -266,6 +319,9 @@ impl InputToken {
         }
     }
 
+
+    /// Gets the data from the :class:`Token`
+    /// :rtype: bytes
     pub fn get_data(&mut self) -> PyResult<Vec<u8>> {
         match &mut self.token {
             zenoh_flow::InputToken::Ready(ref mut r) => {
@@ -283,6 +339,8 @@ impl InputToken {
         }
     }
 
+    /// Gets the action from the :class:`Token`
+    /// :rtype: str
     pub fn get_action(&self) -> String {
         match &self.token {
             zenoh_flow::InputToken::Ready(ref r) => r.get_action().to_string(),
@@ -290,6 +348,9 @@ impl InputToken {
         }
     }
 
+    /// Checks if the :class:`Token` is ready.
+    /// i.e. has Data.
+    /// :rtype: bool
     pub fn is_ready(&self) -> bool {
         match &self.token {
             zenoh_flow::InputToken::Ready(_) => true,
@@ -297,6 +358,9 @@ impl InputToken {
         }
     }
 
+    /// Checks if the :class:`Token` is pending.
+    /// i.e. has no data.
+    /// :rtype: bool
     pub fn is_pending(&self) -> bool {
         match &self.token {
             zenoh_flow::InputToken::Pending => true,
@@ -317,6 +381,8 @@ impl Into<zenoh_flow::InputToken> for InputToken {
     }
 }
 
+
+/// A set of :class:`InputTokens`
 #[pyclass]
 #[derive(Clone, Debug)]
 pub struct InputTokens {
@@ -325,6 +391,11 @@ pub struct InputTokens {
 
 #[pymethods]
 impl InputTokens {
+    /// Gets the :class:`InputToken` for the given port ID.
+    /// :param port_id: The input port ID.
+    /// :type port_id: str
+    ///
+    /// :rtype: :class:`InputToken`
     pub fn get(&mut self, port_id: String) -> PyResult<InputToken> {
         match self.tokens.get(&port_id) {
             Some(t) => Ok(t.clone()),
@@ -365,6 +436,14 @@ impl Into<HashMap<zenoh_flow::PortId, zenoh_flow::InputToken>> for InputTokens {
     }
 }
 
+
+/// A Zenoh Flow local deadline miss.
+/// A structure containing all the information regarding a missed, local, deadline.
+/// A local deadline is represented by a maximum time between receiving the
+/// data at the Input Rules and providing a result to the Output Rule.
+/// This means that if the Run function takes more that the deadline
+/// the Output Rule will be notified by the means of this
+/// `LocalDeadlineMiss`.
 #[pyclass]
 #[derive(Clone)]
 pub struct LocalDeadlineMiss {
@@ -374,11 +453,16 @@ pub struct LocalDeadlineMiss {
 
 #[pymethods]
 impl LocalDeadlineMiss {
+
+    /// Gets the deadline.
+    /// :rtype: int
     #[getter]
     fn deadline(&self) -> u128 {
         self.deadline
     }
 
+    /// Gets the elapsed time.
+    /// :rtype: int
     #[getter]
     fn elapsed(&self) -> u128 {
         self.elapsed
@@ -409,6 +493,9 @@ impl From<Option<zenoh_flow::LocalDeadlineMiss>> for LocalDeadlineMiss {
     }
 }
 
+
+/// The descriptor on where an E2E Deadline starts.
+///
 #[pyclass]
 #[derive(Clone)]
 pub struct FromDescriptor {
@@ -418,17 +505,23 @@ pub struct FromDescriptor {
 
 #[pymethods]
 impl FromDescriptor {
+    /// Gets the node ID from :class:`FromDescriptor`
+    /// :rtype: str
     #[getter]
     fn node(&self) -> &str {
         &self.node
     }
 
+    /// Gets the port ID from :class:`FromDescriptor`
+    /// :rtype: str
     #[getter]
     fn output(&self) -> &str {
         &self.output
     }
 }
 
+/// The descriptor on where a E2E Deadline ends.
+///
 #[pyclass]
 #[derive(Clone)]
 pub struct ToDescriptor {
@@ -438,17 +531,24 @@ pub struct ToDescriptor {
 
 #[pymethods]
 impl ToDescriptor {
+    /// Gets the node ID from :class:`ToDescriptor`
+    /// :rtype: str
     #[getter]
     fn node(&self) -> &str {
         &self.node
     }
 
+    /// Gets the port ID from :class:`ToDescriptor`
+    /// :rtype: str
     #[getter]
     fn input(&self) -> &str {
         &self.input
     }
 }
 
+
+/// A End to End Deadline.
+/// A deadline can apply for a whole graph or for a subpart of it.
 #[pyclass]
 #[derive(Clone)]
 pub struct E2EDeadlineMiss {
@@ -460,21 +560,29 @@ pub struct E2EDeadlineMiss {
 
 #[pymethods]
 impl E2EDeadlineMiss {
+    /// Gets from where the deadline starts.
+    /// :rtype: :class:`FromDescriptor`
     #[getter]
     fn from(&self) -> FromDescriptor {
         self.from.clone()
     }
 
+
+    /// Gets where the deadline ends.
+    /// :rtype: :class:`ToDescriptor`
     #[getter]
     fn to(&self) -> ToDescriptor {
         self.to.clone()
     }
 
+    /// Gets the start time of the deadline.
+    /// :rtype: int
     #[getter]
     fn start(&self) -> u64 {
         self.start
     }
-
+    /// Gets the end time of the deadline.
+    /// :rtype: int
     #[getter]
     fn end(&self) -> u64 {
         self.end
