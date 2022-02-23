@@ -23,4 +23,5 @@ fn get_py_lib_name() -> String {
 fn main() {
     let py = get_py_lib_name();
     println!("cargo:rustc-env=PY_LIB={}", py);
+    println!("cargo:rustc-link-lib=dylib={}", py);
 }

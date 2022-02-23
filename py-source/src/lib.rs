@@ -128,6 +128,8 @@ impl Node for PySource {
 zenoh_flow::export_source!(register);
 
 fn load_self() -> ZFResult<Library> {
+    log::trace!("Python Source Wrapper loading Python {}", PY_LIB);
+
     // Very dirty hack!
     let lib_name = libloading::library_filename(PY_LIB);
     unsafe {

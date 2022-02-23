@@ -258,6 +258,8 @@ impl Node for PyOperator {
 export_operator!(register);
 
 fn load_self() -> ZFResult<Library> {
+
+    log::trace!("Python Operator Wrapper loading Python {}", PY_LIB);
     // Very dirty hack!
     let lib_name = libloading::library_filename(PY_LIB);
     unsafe {

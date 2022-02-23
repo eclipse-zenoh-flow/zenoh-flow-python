@@ -12,6 +12,7 @@ async-trait = "0.1"
 zenoh-flow-python-types = {path = "../zenoh-flow-python-types/"}
 pyo3 = "0.15"
 libloading = "0.7"
+log = "0.4"
 
 [build-dependencies]
 pyo3-build-config = {version = "0.15", features = ["resolve-config"]}

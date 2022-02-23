@@ -1,0 +1,6 @@
+name: python
+file_extension: py
+source_lib: ./target/release/libpy_source.so
+sink_lib: ./target/release/libpy_sink.so
+operator_lib: ./target/release/libpy_op.so
+config_lib_key: python-script

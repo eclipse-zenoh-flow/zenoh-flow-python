@@ -134,6 +134,9 @@ impl Node for PySink {
 zenoh_flow::export_sink!(register);
 
 fn load_self() -> ZFResult<Library> {
+
+    log::trace!("Python Sink Wrapper loading Python {}", PY_LIB);
+
     // Very dirty hack!
     let lib_name = libloading::library_filename(PY_LIB);
     unsafe {
