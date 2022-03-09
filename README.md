@@ -11,6 +11,7 @@
 ### Requirements
 
 - Rust: see the [installation page](https://www.rust-lang.org/tools/install)
+- a matching version of libpython. On linux systems, it's typically packaged separately as ``libpython3.x-dev` or `python3.x-dev`.
 - Python >= 3.6
 - pip >= 19.3.1
 - virtualenv
