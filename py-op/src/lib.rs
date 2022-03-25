@@ -223,7 +223,8 @@ impl Node for PyOperator {
                 let py_config = config["configuration"].take();
 
                 // Convert configuration to Python
-                let py_config = configuration_into_py(py, py_config);
+                let py_config = configuration_into_py(py, py_config)
+                .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                 // Load Python code
                 let code = read_file(script_file_path)?;

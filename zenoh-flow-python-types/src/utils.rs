@@ -19,26 +19,27 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use zenoh_flow::{ZFError, ZFResult};
 
-pub fn configuration_into_py(py: Python, value: zenoh_flow::Configuration) -> PyObject {
+pub fn configuration_into_py(py: Python, value: zenoh_flow::Configuration) -> PyResult<PyObject> {
     match value {
         zenoh_flow::Configuration::Array(arr) => {
             let py_list = PyList::empty(py);
             for v in arr {
-                py_list.append(configuration_into_py(py, v)).unwrap();
+                py_list.append(configuration_into_py(py, v)?)?;
             }
-            py_list.to_object(py)
+            Ok(py_list.to_object(py))
         }
         zenoh_flow::Configuration::Object(obj) => {
             let py_dict = PyDict::new(py);
             for (k, v) in obj {
-                py_dict.set_item(k, configuration_into_py(py, v)).unwrap();
+                py_dict.set_item(k, configuration_into_py(py, v)?)?;
             }
-            py_dict.to_object(py)
+            Ok(py_dict.to_object(py))
         }
-        zenoh_flow::Configuration::Bool(b) => b.to_object(py),
-        zenoh_flow::Configuration::Number(n) => n.as_u64().unwrap().to_object(py), //TODO convert to the right number
-        zenoh_flow::Configuration::String(s) => s.to_object(py),
-        zenoh_flow::Configuration::Null => py.None(),
+        zenoh_flow::Configuration::Bool(b) => Ok(b.to_object(py)),
+        //FIXME: it should convert to the right type: i64, u64 or f64
+        zenoh_flow::Configuration::Number(n) => Ok(n.as_u64().unwrap().to_object(py)),
+        zenoh_flow::Configuration::String(s) => Ok(s.to_object(py)),
+        zenoh_flow::Configuration::Null => Ok(py.None()),
     }
 }
 

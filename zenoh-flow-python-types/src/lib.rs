@@ -14,7 +14,6 @@
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use pyo3::PyObjectProtocol;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::convert::{From, TryFrom};
@@ -95,10 +94,7 @@ impl DataMessage {
     fn missed_end_to_end_deadlines(&self) -> Vec<E2EDeadlineMiss> {
         self.missed_end_to_end_deadlines.clone()
     }
-}
 
-#[pyproto]
-impl PyObjectProtocol for DataMessage {
     fn __str__(&self) -> PyResult<String> {
         Ok(format!("Timestamp {:?} - Data: {:?}", self.ts, self.data))
     }
@@ -163,10 +159,7 @@ impl Inputs {
             None => None,
         }
     }
-}
 
-#[pyproto]
-impl PyObjectProtocol for Inputs {
     fn __str__(&self) -> PyResult<String> {
         Ok(format!("Total data {}", self.inputs.len()))
     }
@@ -229,10 +222,7 @@ impl Outputs {
             None => None,
         }
     }
-}
 
-#[pyproto]
-impl PyObjectProtocol for Outputs {
     fn __str__(&self) -> PyResult<String> {
         Ok(format!("Total data {}", self.outputs.len()))
     }
