@@ -401,9 +401,10 @@ impl InputTokens {
     pub fn get(&mut self, port_id: String) -> PyResult<InputToken> {
         match self.tokens.get(&port_id) {
             Some(t) => Ok(t.clone()),
-            None => Err(pyo3::exceptions::PyValueError::new_err(
-                format!("No tokens found for the given port_id {}", port_id).to_string(),
-            )),
+            None => Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "No tokens found for the given port_id {}",
+                port_id
+            ))),
         }
     }
 }

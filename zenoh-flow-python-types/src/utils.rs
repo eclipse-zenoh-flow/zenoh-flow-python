@@ -36,8 +36,24 @@ pub fn configuration_into_py(py: Python, value: zenoh_flow::Configuration) -> Py
             Ok(py_dict.to_object(py))
         }
         zenoh_flow::Configuration::Bool(b) => Ok(b.to_object(py)),
-        //FIXME: it should convert to the right type: i64, u64 or f64
-        zenoh_flow::Configuration::Number(n) => Ok(n.as_u64().unwrap().to_object(py)),
+        zenoh_flow::Configuration::Number(n) => {
+            if n.is_i64() {
+                return Ok(n
+                    .as_i64()
+                    .expect(&format!("Unable to convert {:?} to i64", n))
+                    .to_object(py));
+            } else if n.is_u64() {
+                return Ok(n
+                    .as_u64()
+                    .expect(&format!("Unable to convert {:?} to u64", n))
+                    .to_object(py));
+            } else {
+                return Ok(n
+                    .as_f64()
+                    .expect(&format!("Unable to convert {:?} to f64", n))
+                    .to_object(py));
+            }
+        }
         zenoh_flow::Configuration::String(s) => Ok(s.to_object(py)),
         zenoh_flow::Configuration::Null => Ok(py.None()),
     }
