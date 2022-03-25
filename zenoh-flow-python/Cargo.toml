@@ -18,12 +18,12 @@ readme = "../README.md"
 [dependencies]
 zenoh-flow-python-types = { path = "../zenoh-flow-python-types"}
 uhlc = "0.4"
-pyo3 = "0.15"
+pyo3 = "0.16"
 
 [features]
-abi-py36 = ["pyo3/abi3-py36"]
+abi-py37 = ["pyo3/abi3-py37"]
 extension-module = ["pyo3/extension-module"]
-default = ["extension-module", "abi-py36"]
+default = ["extension-module", "abi-py37"]
 
 [lib]
 name = "zenoh_flow"

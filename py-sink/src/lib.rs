@@ -7,6 +7,7 @@ use zenoh_flow::async_std::sync::Arc;
 use zenoh_flow::zenoh_flow_derive::ZFState;
 use zenoh_flow::Configuration;
 use zenoh_flow::{DataMessage, Node, Sink, State, ZFError, ZFResult};
+use zenoh_flow_python_types::from_pyerr_to_zferr;
 use zenoh_flow_python_types::utils::configuration_into_py;
 use zenoh_flow_python_types::Context as PyContext;
 use zenoh_flow_python_types::DataMessage as PyDataMessage;
@@ -69,7 +70,7 @@ impl Sink for PySink {
                     py_data,
                 ),
             )
-            .map_err(|e| ZFError::InvalidData(e.to_string()))?;
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
         Ok(())
     }
@@ -97,23 +98,23 @@ impl Node for PySink {
                 let py_config = config["configuration"].take();
 
                 // Convert configuration to Python
-                let py_config = configuration_into_py(py, py_config);
+                let py_config = configuration_into_py(py, py_config).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                 // Load Python code
-                let code = read_file(script_file_path);
-                let module = PyModule::from_code(py, &code, "sink.py", "sink")
-                    .map_err(|e| ZFError::InvalidData(e.to_string()))?;
-
+                let code = read_file(script_file_path)?;
+                let module =
+                    PyModule::from_code(py, &code, &script_file_path.to_string_lossy(), "sink")
+                        .map_err(|e| from_pyerr_to_zferr(e, &py))?;
                 // Getting the correct python module
                 let sink_class: PyObject = module
                     .call_method0("register")
-                    .map_err(|e| ZFError::InvalidData(e.to_string()))?
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
                     .into();
 
                 // Initialize python state
                 let state: PyObject = sink_class
                     .call_method1(py, "initialize", (sink_class.clone(), py_config))
-                    .map_err(|e| ZFError::InvalidData(e.to_string()))?
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
                     .into();
 
                 Ok(State::from(PythonState {
@@ -134,7 +135,6 @@ impl Node for PySink {
 zenoh_flow::export_sink!(register);
 
 fn load_self() -> ZFResult<Library> {
-
     log::trace!("Python Sink Wrapper loading Python {}", PY_LIB);
 
     // Very dirty hack!
@@ -155,6 +155,6 @@ fn register() -> ZFResult<Arc<dyn Sink>> {
     Ok(Arc::new(PySink(library)) as Arc<dyn Sink>)
 }
 
-fn read_file(path: &Path) -> String {
-    fs::read_to_string(path).unwrap()
+fn read_file(path: &Path) -> ZFResult<String> {
+    Ok(fs::read_to_string(path)?)
 }

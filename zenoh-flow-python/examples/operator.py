@@ -29,7 +29,7 @@ class MyState:
 
 class MyOp(Operator):
     def initialize(self, configuration):
-         return MyState()
+        return MyState()
 
     def finalize(self, state):
         return None
@@ -54,7 +54,6 @@ class MyOp(Operator):
     def run(self, _ctx, _state, inputs):
         # Getting the inputs
         data = inputs.get('Data').data
-
         # Computing over the inputs
         int_data = int_from_bytes(data)
         int_data = int_data * 2

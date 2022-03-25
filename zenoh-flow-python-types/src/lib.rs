@@ -14,13 +14,20 @@
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use pyo3::PyObjectProtocol;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::convert::{From, TryFrom};
 use zenoh_flow::ZFError;
 
 pub mod utils;
+
+pub fn from_pyerr_to_zferr(py_err: pyo3::PyErr, py: &pyo3::Python<'_>) -> ZFError {
+    let tb = py_err
+        .traceback(*py)
+        .expect("This error should have a traceback");
+    let err_str = format!("{:?}", tb.format());
+    ZFError::InvalidData(err_str)
+}
 
 /// A Zenoh Flow context.
 /// Zenoh Flow context contains a `mode` that represent
@@ -87,10 +94,7 @@ impl DataMessage {
     fn missed_end_to_end_deadlines(&self) -> Vec<E2EDeadlineMiss> {
         self.missed_end_to_end_deadlines.clone()
     }
-}
 
-#[pyproto]
-impl PyObjectProtocol for DataMessage {
     fn __str__(&self) -> PyResult<String> {
         Ok(format!("Timestamp {:?} - Data: {:?}", self.ts, self.data))
     }
@@ -155,10 +159,7 @@ impl Inputs {
             None => None,
         }
     }
-}
 
-#[pyproto]
-impl PyObjectProtocol for Inputs {
     fn __str__(&self) -> PyResult<String> {
         Ok(format!("Total data {}", self.inputs.len()))
     }
@@ -221,10 +222,7 @@ impl Outputs {
             None => None,
         }
     }
-}
 
-#[pyproto]
-impl PyObjectProtocol for Outputs {
     fn __str__(&self) -> PyResult<String> {
         Ok(format!("Total data {}", self.outputs.len()))
     }

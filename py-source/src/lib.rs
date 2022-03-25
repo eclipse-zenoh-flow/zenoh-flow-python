@@ -6,6 +6,7 @@ use zenoh_flow::async_std::sync::Arc;
 use zenoh_flow::zenoh_flow_derive::ZFState;
 use zenoh_flow::Configuration;
 use zenoh_flow::{Data, Node, Source, State, ZFError, ZFResult};
+use zenoh_flow_python_types::from_pyerr_to_zferr;
 use zenoh_flow_python_types::utils::configuration_into_py;
 use zenoh_flow_python_types::Context as PyContext;
 
@@ -60,9 +61,9 @@ impl Source for PySource {
                     current_state.py_state.as_ref().clone(),
                 ),
             )
-            .map_err(|e| ZFError::InvalidData(e.to_string()))?
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?
             .extract(py)
-            .map_err(|e| ZFError::InvalidData(e.to_string()))?;
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
         // Converting to rust types
         Ok(Data::from_bytes(value))
@@ -91,23 +92,23 @@ impl Node for PySource {
                 let py_config = config["configuration"].take();
 
                 // Convert configuration to Python
-                let py_config = configuration_into_py(py, py_config);
+                let py_config = configuration_into_py(py, py_config).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                 // Load Python code
-                let code = read_file(script_file_path);
-                let module = PyModule::from_code(py, &code, "source.py", "source")
-                    .map_err(|e| ZFError::InvalidData(e.to_string()))?;
-
+                let code = read_file(script_file_path)?;
+                let module =
+                    PyModule::from_code(py, &code, &script_file_path.to_string_lossy(), "source")
+                        .map_err(|e| from_pyerr_to_zferr(e, &py))?;
                 // Getting the correct python module
                 let source_class: PyObject = module
                     .call_method0("register")
-                    .map_err(|e| ZFError::InvalidData(e.to_string()))?
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
                     .into();
 
                 // Initialize python state
                 let state: PyObject = source_class
                     .call_method1(py, "initialize", (source_class.clone(), py_config))
-                    .map_err(|e| ZFError::InvalidData(e.to_string()))?
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
                     .into();
 
                 Ok(State::from(PythonState {
@@ -148,6 +149,6 @@ fn register() -> ZFResult<Arc<dyn Source>> {
     Ok(Arc::new(PySource(library)) as Arc<dyn Source>)
 }
 
-fn read_file(path: &Path) -> String {
-    fs::read_to_string(path).unwrap()
+fn read_file(path: &Path) -> ZFResult<String> {
+    Ok(fs::read_to_string(path)?)
 }
