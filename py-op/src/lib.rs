@@ -26,6 +26,7 @@ use zenoh_flow::{
     NodeOutput, Operator, PortId, State,
 };
 use zenoh_flow::{Context, Data, ZFError};
+use zenoh_flow_python_types::from_pyerr_to_zferr;
 use zenoh_flow_python_types::utils::{configuration_into_py, outputs_from_py, tokens_into_py};
 use zenoh_flow_python_types::Context as PyContext;
 use zenoh_flow_python_types::InputToken as PyToken;
@@ -92,14 +93,14 @@ impl Operator for PyOperator {
                     &py_tokens,
                 ),
             )
-            .map_err(|e| ZFError::InvalidData(e.to_string()))?
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?
             .extract(py)
-            .map_err(|e| ZFError::InvalidData(e.to_string()))?;
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
         // Getting back the tokens
         let py_tokens: HashMap<String, PyToken> = py_tokens
             .extract(py)
-            .map_err(|e| ZFError::InvalidData(e.to_string()))?;
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
         // Converting the tokens to the rust type
         let new_tokens = {
@@ -145,7 +146,7 @@ impl Operator for PyOperator {
                     py_data,
                 ),
             )
-            .map_err(|e| ZFError::InvalidData(e.to_string()))?;
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
         // Converting the results
         let values = outputs_from_py(py, py_values.into())?;
@@ -184,7 +185,7 @@ impl Operator for PyOperator {
                     deadline_miss,
                 ),
             )
-            .map_err(|e| ZFError::InvalidData(e.to_string()))?;
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
         // Converting the results
         let py_values = outputs_from_py(py, py_values.into())?;
@@ -225,20 +226,23 @@ impl Node for PyOperator {
                 let py_config = configuration_into_py(py, py_config);
 
                 // Load Python code
-                let code = read_file(script_file_path);
-                let module = PyModule::from_code(py, &code, "op.py", "op")
-                    .map_err(|e| ZFError::InvalidData(e.to_string()))?;
+                let code = read_file(script_file_path)?;
+                let module =
+                    PyModule::from_code(py, &code, &script_file_path.to_string_lossy(), "op")
+                        .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+
+                // .map_err(|e| ZFError::InvalidData(e.to_string()))?;
 
                 // Getting the correct python module
                 let op_class: PyObject = module
                     .call_method0("register")
-                    .map_err(|e| ZFError::InvalidData(e.to_string()))?
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
                     .into();
 
                 // Initialize python state
                 let state: PyObject = op_class
                     .call_method1(py, "initialize", (op_class.clone(), py_config))
-                    .map_err(|e| ZFError::InvalidData(e.to_string()))?
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
                     .into();
 
                 Ok(State::from(PythonState {
@@ -258,7 +262,6 @@ impl Node for PyOperator {
 export_operator!(register);
 
 fn load_self() -> ZFResult<Library> {
-
     log::trace!("Python Operator Wrapper loading Python {}", PY_LIB);
     // Very dirty hack!
     let lib_name = libloading::library_filename(PY_LIB);
@@ -279,6 +282,6 @@ fn register() -> ZFResult<Arc<dyn Operator>> {
     Ok(Arc::new(PyOperator(library)) as Arc<dyn Operator>)
 }
 
-fn read_file(path: &Path) -> String {
-    fs::read_to_string(path).unwrap()
+fn read_file(path: &Path) -> ZFResult<String> {
+    Ok(fs::read_to_string(path)?)
 }

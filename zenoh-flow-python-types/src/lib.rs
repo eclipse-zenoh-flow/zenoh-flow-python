@@ -22,6 +22,14 @@ use zenoh_flow::ZFError;
 
 pub mod utils;
 
+pub fn from_pyerr_to_zferr(py_err: pyo3::PyErr, py: &pyo3::Python<'_>) -> ZFError {
+    let tb = py_err
+        .traceback(*py)
+        .expect("This error should have a traceback");
+    let err_str = format!("{:?}", tb.format());
+    ZFError::InvalidData(err_str)
+}
+
 /// A Zenoh Flow context.
 /// Zenoh Flow context contains a `mode` that represent
 /// the current execution mode for the operator.
