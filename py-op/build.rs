@@ -15,7 +15,7 @@
 fn get_py_lib_name() -> String {
     let config = pyo3_build_config::get();
     match &config.lib_name {
-        Some(name) => return name.clone(),
+        Some(name) => name.clone(),
         None => panic!("Unable to find Python version"),
     }
 }
