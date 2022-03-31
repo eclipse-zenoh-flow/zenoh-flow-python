@@ -286,7 +286,7 @@ impl Operator {
 ///             self.value = int(configuration['value'])
 ///
 /// class MySrc(Source):
-//     def initialize(self, configuration):
+///    def initialize(self, configuration):
 ///         return MyState(configuration)
 ///     def finalize(self, state):
 ///         return None

@@ -115,8 +115,7 @@ impl Node for PySink {
                 // Initialize python state
                 let state: PyObject = sink_class
                     .call_method1(py, "initialize", (sink_class.clone(), py_config))
-                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                    .into();
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                 Ok(State::from(PythonState {
                     module: Arc::new(sink_class),

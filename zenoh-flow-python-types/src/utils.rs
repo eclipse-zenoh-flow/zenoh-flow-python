@@ -13,6 +13,7 @@
 //
 
 use crate::{InputToken, Outputs};
+use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use std::collections::HashMap;
@@ -38,20 +39,32 @@ pub fn configuration_into_py(py: Python, value: zenoh_flow::Configuration) -> Py
         zenoh_flow::Configuration::Bool(b) => Ok(b.to_object(py)),
         zenoh_flow::Configuration::Number(n) => {
             if n.is_i64() {
-                return Ok(n
-                    .as_i64()
-                    .expect(&format!("Unable to convert {:?} to i64", n))
-                    .to_object(py));
+                Ok(n.as_i64()
+                    .ok_or_else(|| {
+                        PyErr::from_value(
+                            PyTypeError::new_err(format!("Unable to convert {:?} to i64", n))
+                                .value(py),
+                        )
+                    })?
+                    .to_object(py))
             } else if n.is_u64() {
-                return Ok(n
-                    .as_u64()
-                    .expect(&format!("Unable to convert {:?} to u64", n))
-                    .to_object(py));
+                Ok(n.as_u64()
+                    .ok_or_else(|| {
+                        PyErr::from_value(
+                            PyTypeError::new_err(format!("Unable to convert {:?} to u64", n))
+                                .value(py),
+                        )
+                    })?
+                    .to_object(py))
             } else {
-                return Ok(n
-                    .as_f64()
-                    .expect(&format!("Unable to convert {:?} to f64", n))
-                    .to_object(py));
+                Ok(n.as_f64()
+                    .ok_or_else(|| {
+                        PyErr::from_value(
+                            PyTypeError::new_err(format!("Unable to convert {:?} to f64", n))
+                                .value(py),
+                        )
+                    })?
+                    .to_object(py))
             }
         }
         zenoh_flow::Configuration::String(s) => Ok(s.to_object(py)),
@@ -63,11 +76,10 @@ pub fn tokens_into_py(
     py: Python,
     rust_tokens: HashMap<zenoh_flow::PortId, zenoh_flow::InputToken>,
 ) -> PyObject {
-    let mut tokens: HashMap<String, InputToken> = HashMap::new();
-
-    for (id, t) in rust_tokens {
-        tokens.insert(id.as_ref().clone().into(), InputToken::from(t));
-    }
+    let tokens = rust_tokens
+        .into_iter()
+        .map(|(id, token)| (id.to_string(), InputToken::from(token)))
+        .collect::<HashMap<String, InputToken>>();
 
     tokens.into_py(py)
 }

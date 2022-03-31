@@ -109,8 +109,7 @@ impl Node for PySource {
                 // Initialize python state
                 let state: PyObject = source_class
                     .call_method1(py, "initialize", (source_class.clone(), py_config))
-                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                    .into();
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                 Ok(State::from(PythonState {
                     module: Arc::new(source_class),
