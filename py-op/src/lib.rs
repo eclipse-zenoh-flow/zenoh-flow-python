@@ -255,7 +255,20 @@ impl Node for PyOperator {
         }
     }
 
-    fn finalize(&self, _state: &mut State) -> ZFResult<()> {
+    fn finalize(&self, state: &mut State) -> ZFResult<()> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let current_state = state.try_get::<PythonState>()?;
+        let op_class = current_state.module.as_ref().clone();
+
+        op_class
+            .call_method1(
+                py,
+                "finalize",
+                (op_class.clone(), current_state.py_state.as_ref().clone()),
+            )
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+
         Ok(())
     }
 }
