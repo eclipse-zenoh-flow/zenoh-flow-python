@@ -44,15 +44,13 @@ impl Context {
     /// :rtype: int
     #[getter]
     fn mode(&self) -> usize {
-        self.mode.clone()
+        self.mode
     }
 }
 
 impl From<&mut zenoh_flow::Context> for Context {
     fn from(ctx: &mut zenoh_flow::Context) -> Self {
-        Self {
-            mode: ctx.mode.clone(),
-        }
+        Self { mode: ctx.mode }
     }
 }
 
@@ -114,7 +112,7 @@ impl TryFrom<zenoh_flow::DataMessage> for DataMessage {
             .collect();
 
         Ok(Self {
-            ts: msg.get_timestamp().clone(),
+            ts: *msg.get_timestamp(),
             data: msg.get_inner_data().try_as_bytes()?.to_vec(),
             missed_end_to_end_deadlines,
         })
@@ -131,7 +129,7 @@ impl TryFrom<&mut zenoh_flow::DataMessage> for DataMessage {
             .collect();
 
         Ok(Self {
-            ts: msg.get_timestamp().clone(),
+            ts: *msg.get_timestamp(),
             data: msg.get_inner_data().try_as_bytes()?.to_vec(),
             missed_end_to_end_deadlines,
         })
@@ -154,10 +152,7 @@ impl Inputs {
     ///
     /// :rtype: :class:`DataMessage`
     fn get(&self, id: String) -> Option<DataMessage> {
-        match self.inputs.get(&id) {
-            Some(dm) => Some(dm.clone()),
-            None => None,
-        }
+        self.inputs.get(&id).cloned()
     }
 
     fn __str__(&self) -> PyResult<String> {
@@ -206,7 +201,7 @@ impl Outputs {
     /// :param data: The data
     /// :type id: bytes
     ///
-    fn put(&mut self, id: String, data: Vec<u8>) -> () {
+    fn put(&mut self, id: String, data: Vec<u8>) {
         self.outputs.insert(id, data);
     }
 
@@ -217,10 +212,7 @@ impl Outputs {
     ///
     /// :rtype: bytes
     fn get(&self, id: String) -> Option<Vec<u8>> {
-        match self.outputs.get(&id) {
-            Some(d) => Some(d.clone()),
-            None => None,
-        }
+        self.outputs.get(&id).cloned()
     }
 
     fn __str__(&self) -> PyResult<String> {
@@ -274,7 +266,7 @@ impl TryFrom<(Py<PyDict>, Python<'_>)> for Outputs {
 
 impl TryInto<HashMap<zenoh_flow::PortId, zenoh_flow::Data>> for Outputs {
     type Error = ZFError;
-    fn try_into(self: Self) -> Result<HashMap<zenoh_flow::PortId, zenoh_flow::Data>, Self::Error> {
+    fn try_into(self) -> Result<HashMap<zenoh_flow::PortId, zenoh_flow::Data>, Self::Error> {
         let mut outputs = HashMap::new();
         for (k, v) in self.outputs {
             let data = zenoh_flow::Data::from_bytes(v);
@@ -353,10 +345,7 @@ impl InputToken {
     ///
     /// :rtype: bool
     pub fn is_ready(&self) -> bool {
-        match &self.token {
-            zenoh_flow::InputToken::Ready(_) => true,
-            _ => false,
-        }
+        matches!(&self.token, zenoh_flow::InputToken::Ready(_))
     }
 
     /// Checks if the :class:`Token` is pending.
@@ -364,10 +353,7 @@ impl InputToken {
     ///
     /// :rtype: bool
     pub fn is_pending(&self) -> bool {
-        match &self.token {
-            zenoh_flow::InputToken::Pending => true,
-            _ => false,
-        }
+        matches!(&self.token, zenoh_flow::InputToken::Pending)
     }
 }
 
@@ -377,9 +363,9 @@ impl From<zenoh_flow::InputToken> for InputToken {
     }
 }
 
-impl Into<zenoh_flow::InputToken> for InputToken {
-    fn into(self) -> zenoh_flow::InputToken {
-        self.token
+impl From<InputToken> for zenoh_flow::InputToken {
+    fn from(val: InputToken) -> Self {
+        val.token
     }
 }
 
@@ -417,25 +403,21 @@ impl InputTokens {
 
 impl From<HashMap<zenoh_flow::PortId, zenoh_flow::InputToken>> for InputTokens {
     fn from(rust_tokens: HashMap<zenoh_flow::PortId, zenoh_flow::InputToken>) -> Self {
-        let mut tokens = HashMap::new();
-
-        for (id, t) in rust_tokens {
-            tokens.insert(id.as_ref().clone().into(), InputToken::from(t));
+        Self {
+            tokens: rust_tokens
+                .into_iter()
+                .map(|(id, token)| (id.to_string(), InputToken::from(token)))
+                .collect(),
         }
-
-        Self { tokens }
     }
 }
 
-impl Into<HashMap<zenoh_flow::PortId, zenoh_flow::InputToken>> for InputTokens {
-    fn into(self) -> HashMap<zenoh_flow::PortId, zenoh_flow::InputToken> {
-        let mut tokens = HashMap::new();
-
-        for (id, t) in self.tokens {
-            tokens.insert(id.into(), t.into());
-        }
-
-        tokens
+impl From<InputTokens> for HashMap<zenoh_flow::PortId, zenoh_flow::InputToken> {
+    fn from(val: InputTokens) -> Self {
+        val.tokens
+            .into_iter()
+            .map(|(id, token)| (id.into(), token.into()))
+            .collect()
     }
 }
 
@@ -599,12 +581,12 @@ impl E2EDeadlineMiss {
 impl From<&zenoh_flow::runtime::deadline::E2EDeadlineMiss> for E2EDeadlineMiss {
     fn from(e2d_deadline_miss: &zenoh_flow::runtime::deadline::E2EDeadlineMiss) -> Self {
         let to = ToDescriptor {
-            node: e2d_deadline_miss.to.node.as_ref().clone().into(),
-            input: e2d_deadline_miss.to.input.as_ref().clone().into(),
+            node: e2d_deadline_miss.to.node.to_string(),
+            input: e2d_deadline_miss.to.input.to_string(),
         };
         let from = FromDescriptor {
-            node: e2d_deadline_miss.from.node.as_ref().clone().into(),
-            output: e2d_deadline_miss.from.output.as_ref().clone().into(),
+            node: e2d_deadline_miss.from.node.to_string(),
+            output: e2d_deadline_miss.from.output.to_string(),
         };
 
         Self {

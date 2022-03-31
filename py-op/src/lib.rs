@@ -69,7 +69,7 @@ impl Operator for PyOperator {
         tokens: &mut HashMap<PortId, InputToken>,
     ) -> ZFResult<bool> {
         // Getting tokens for conversion to Python
-        let real_tokens = std::mem::replace(tokens, HashMap::new());
+        let real_tokens = std::mem::take(tokens);
 
         // Preparing python environment
         let gil = Python::acquire_gil();
@@ -149,9 +149,7 @@ impl Operator for PyOperator {
             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
         // Converting the results
-        let values = outputs_from_py(py, py_values.into())?;
-
-        Ok(values.try_into()?)
+        outputs_from_py(py, py_values)?.try_into()
     }
 
     fn output_rule(
@@ -188,7 +186,7 @@ impl Operator for PyOperator {
             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
         // Converting the results
-        let py_values = outputs_from_py(py, py_values.into())?;
+        let py_values = outputs_from_py(py, py_values)?;
 
         // Generating the rust output
         let rust_values: HashMap<PortId, Data> = py_values.try_into()?;
@@ -243,8 +241,7 @@ impl Node for PyOperator {
                 // Initialize python state
                 let state: PyObject = op_class
                     .call_method1(py, "initialize", (op_class.clone(), py_config))
-                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                    .into();
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                 Ok(State::from(PythonState {
                     module: Arc::new(op_class),
