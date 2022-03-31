@@ -25,7 +25,7 @@ pub fn from_pyerr_to_zferr(py_err: pyo3::PyErr, py: &pyo3::Python<'_>) -> ZFErro
     let tb = py_err
         .traceback(*py)
         .expect("This error should have a traceback");
-    let err_str = format!("{:?}", tb.format());
+    let err_str = format!("Error: {:?}\nTraceback: {:?}", py_err, tb.format());
     ZFError::InvalidData(err_str)
 }
 
