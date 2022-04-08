@@ -15,12 +15,51 @@
 
 
 class Sink(object):
+    '''
+        The class representing a Zenoh Flow sink
+    '''
 
     def run(self, context, state, input: bytes) -> None:
+        '''
+            The run method is called by the Zenoh Flow runtime.
+            Any sink has to implement this method.
+            This method is called when data is received from the input.
+
+            :param context: The Sink context
+            :type context: :class:`Context`
+            :param state: The sink state
+            :type state: any
+            :param input: The data message.
+            :type input: :class:`DataMessage`
+        '''
         NotImplementedError("Please implement your own method, Sink is an interface")
 
     def initialize(self, configuration):
+        '''
+            The initialize method is called by the zenoh flow runtime.
+            This method is called when starting the data flow graph.
+            Any sink has to implement this method.
+            This method is use to initialize any state that can be useful
+            for the sink (e.g. open files)
+            It should then return the state to the runtime.
+
+            :param configuration: Configuration
+            :type configuraion: dict
+
+            :rtype: any
+        '''
         NotImplementedError("Please implement your own method, Sink is an interface")
 
     def finalize(self, state) -> None:
+        '''
+            The finalize method is called by the zenoh flow runtime.
+            This method is called when stopping the data flow graph.
+            Any sink has to implement this method.
+            This method is use to finalize any state that can be useful
+            for the sink (e.g. close files)
+            It should destroy the state.
+
+            :param state: Sink state
+            :type state: any
+        '''
         NotImplementedError("Please implement your own method, Sink is an interface")

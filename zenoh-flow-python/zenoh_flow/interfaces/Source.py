@@ -17,12 +17,45 @@
 
 
 class Source(object):
-
+    '''
+        The class representing a Zenoh Flow source
+    '''
     def run(self, context, state) -> bytes:
+        '''
+            The run method is called by the zenoh flow runtime.
+            This method is expected to produce data whenever it is called.
+            Any source has to implement this method.
+
+            :rtype: bytes
+        '''
         NotImplementedError("Please implement your own method, Source is an interface")
 
     def initialize(self, configuration):
+        '''
+            The initialize method is called by the zenoh flow runtime.
+            This method is called when starting the data flow graph.
+            Any source has to implement this method.
+            This method is use to initialize any state that can be useful
+            for the source (e.g. open files)
+            It should then return the state to the runtime.
+
+            :param configuration: Configuration
+            :type configuraion: dict
+
+            :rtype: any
+        '''
         NotImplementedError("Please implement your own method, Source is an interface")
 
     def finalize(self, state) -> None:
+        '''
+            The finalize method is called by the zenoh flow runtime.
+            This method is called when stopping the data flow graph.
+            Any source has to implement this method.
+            This method is use to finalize any state that can be useful
+            for the source (e.g. close files)
+            It should destroy the state.
+
+            :param state: Source state
+            :type state: any
+        '''
         NotImplementedError("Please implement your own method, Source is an interface")

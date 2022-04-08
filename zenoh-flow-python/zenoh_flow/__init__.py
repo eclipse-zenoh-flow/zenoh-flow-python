@@ -12,5 +12,132 @@
 #   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 #
 
+
+'''
+ The zenoh flow Python API.
+
+ This API it's NOT meant to be used directly, instead your operators, sink
+ and sources have to implement the methods provided by the different classes.
+ A .py can contain only one graph node.
+ Each .py needs to contain a register function that takes no parameter
+ and returns the node.
+
+ def register():
+     return MyGraphNode
+
+
+ Below some examples for simple source, sink and operator.
+
+ Examples:
+ ~~~~~~~~
+
+
+ Source:
+ """"""""
+
+ from zenoh_flow import Inputs, Outputs, Source
+ import time
+
+ class MyState:
+     def __init__(self, configuration):
+         self.value = 0
+         if configuration['value'] is not None:
+             self.value = int(configuration['value'])
+
+ class MySrc(Source):
+    def initialize(self, configuration):
+         return MyState(configuration)
+     def finalize(self, state):
+         return None
+     def run(self, _ctx, state):
+         state.value += 1
+         time.sleep(1)
+         return int_to_bytes(state.value)
+
+ def int_to_bytes(x: int) -> bytes:
+     return x.to_bytes((x.bit_length() + 7) // 8, 'big')
+ def register():
+     return MySrc
+ """"""""
+
+
+ Sink:
+ """"""""
+ from zenoh_flow import Sink
+
+ class MySink(Sink):
+     def initialize(self, configuration):
+         return None
+     def finalize(self, state):
+         return None
+     def run(self, _ctx, _state, input):
+         print(f"Received {input}")
+
+ def register():
+     return MySink
+""""""""""
+
+
+ Operator:
+ """"""""
+ from zenoh_flow import Inputs, Operator, Outputs
+ class MyState:
+     def __init__(self):
+         self.value = 0
+     def inc(self):
+         self.value += 1
+     def mod_2(self):
+         return (self.value % 2)
+     def mod_3(self):
+         return (self.value % 3)
+
+ class MyOp(Operator):
+     def initialize(self, configuration):
+          return MyState()
+     def finalize(self, state):
+         return None
+     def input_rule(self, _ctx, state, tokens):
+         # Using input rules
+         state.inc()
+         token = tokens.get('Data')
+         if state.mod_2():
+             token.set_action_consume()
+             return True
+         elif state.mod_3():
+             token.set_action_keep()
+             return True
+         else:
+             token.set_action_drop()
+             return False
+
+     def output_rule(self, _ctx, _state, outputs, _deadline_miss):
+         return outputs
+
+     def run(self, _ctx, _state, inputs):
+         # Getting the inputs
+         data = inputs.get('Data').data
+
+         # Computing over the inputs
+         int_data = int_from_bytes(data)
+         int_data = int_data * 2
+         # Producing the outputs
+         outputs = {'Data' : int_to_bytes(int_data)}
+         return outputs
+
+ def int_to_bytes(x: int) -> bytes:
+     return x.to_bytes((x.bit_length() + 7) // 8, 'big')
+
+ def int_from_bytes(xbytes: bytes) -> int:
+     return int.from_bytes(xbytes, 'big')
+
+ def register():
+     return MyOp
+ """"""""""""
+
+'''
+
+
 from zenoh_flow import interfaces
 from zenoh_flow import types
+
+
