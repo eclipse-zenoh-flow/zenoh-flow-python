@@ -13,15 +13,6 @@
 #
 
 from setuptools import find_packages, setup
-try:
-    from setuptools_rust import Binding, RustExtension
-except ImportError:
-    import sys
-    import subprocess
-
-    subprocess.call([sys.executable, '-m', 'pip', 'install',
-                     'setuptools-rust'])
-    from setuptools_rust import Binding, RustExtension
 
 
 def readme():
@@ -40,12 +31,10 @@ setup(
     license="EPL-2.0 OR Apache-2.0",
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
-        "Programming Language :: Rust",
         "Intended Audience :: Developers",
         "Development Status :: 1 - Alpha",
         "License :: OSI Approved :: Apache Software License",
@@ -60,9 +49,8 @@ setup(
         "Bug Tracker": "https://github.com/eclipse-zenoh/zenoh-flow/issues",
         "Source Code": "https://github.com/eclipse-zenoh/zenoh-flow",
     },
-    rust_extensions=[RustExtension("zenoh_flow", "Cargo.toml",
-                                   binding=Binding.PyO3, py_limited_api=True)],
-    packages=find_packages(),
+    # packages=find_packages(),
+    packages=["zenoh_flow", "zenoh_flow.interfaces", "zenoh_flow.types"],
     zip_safe=False,
-    python_requires=">=3.6",
+    python_requires=">=3.7",
 )

@@ -10,8 +10,7 @@
 
 ### Requirements
 
-- Rust: see the [installation page](https://www.rust-lang.org/tools/install)
-- Python >= 3.6
+- Python >= 3.7
 - pip >= 19.3.1
 - virtualenv
 
@@ -33,14 +32,12 @@ Build the Python Wheel
 (venv) $ cd zenoh-flow-python
 (venv) $ pip3 install -r requirements-dev.txt
 (venv) $ python setup.py bdist_wheel
-...
-📦 Built wheel for abi3 Python ≥ 3.6 to /path/to/zenoh-flow-python/target/wheels/zenoh_flow_python-0.1.0-cp36-abi3-macosx_10_7_x86_64.whl
 ```
 
 On a separate terminal install the wheel.
 
 ```bash
-$ pip3 install /path/to/zenoh-flow-python/target/wheels/zenoh_flow_python-0.1.0-cp36-abi3-macosx_10_7_x86_64.whl
+$ pip3 install /path/to/zenoh-flow-python/target/wheels/eclipse_zenoh_flow-0.2.0-py3-none-any.whl
 ```
 
 ### Run an example

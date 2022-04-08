@@ -12,6 +12,17 @@
 #   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 #
 
-# As PyO3 is configured with "abi3-py37" feature for stable ABI, we can make the wheel reflect it:
-[bdist_wheel]
-py-limited-api = cp37
+
+
+
+
+class Source(object):
+
+    def run(self, context, state) -> bytes:
+        NotImplementedError("Please implement your own method, Source is an interface")
+
+    def initialize(self, configuration):
+        NotImplementedError("Please implement your own method, Source is an interface")
+
+    def finalize(self, state) -> None:
+        NotImplementedError("Please implement your own method, Source is an interface")

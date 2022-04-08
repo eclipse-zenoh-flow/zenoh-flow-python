@@ -12,5 +12,15 @@
 #   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 #
 
-[build-system]
-requires = ["setuptools", "wheel", "setuptools-rust"]
+
+
+class Sink(object):
+
+    def run(self, context, state, input: bytes) -> None:
+        NotImplementedError("Please implement your own method, Sink is an interface")
+
+    def initialize(self, configuration):
+        NotImplementedError("Please implement your own method, Sink is an interface")
+
+    def finalize(self, state) -> None:
+        NotImplementedError("Please implement your own method, Sink is an interface")
