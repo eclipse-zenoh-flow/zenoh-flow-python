@@ -22,10 +22,13 @@ use zenoh_flow::ZFError;
 pub mod utils;
 
 pub fn from_pyerr_to_zferr(py_err: pyo3::PyErr, py: &pyo3::Python<'_>) -> ZFError {
-    let tb = py_err
-        .traceback(*py)
-        .expect("This error should have a traceback");
-    let err_str = format!("Error: {:?}\nTraceback: {:?}", py_err, tb.format());
+    let tb = if let Some(traceback) = py_err.traceback(*py) {
+        traceback.format().map_or_else(|_| "".to_string(), |s| s)
+    } else {
+        "".to_string()
+    };
+
+    let err_str = format!("Error: {:?}\nTraceback: {:?}", py_err, tb);
     ZFError::InvalidData(err_str)
 }
 
