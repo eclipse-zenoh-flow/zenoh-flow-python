@@ -17,31 +17,56 @@ Zenoh Flow API Reference
 
 Context
 -------
-.. autoclass:: zenoh_flow.Context
+.. autoclass:: zenoh_flow.types.Context
     :members:
 
 DataMessage
 -----------
-.. autoclass:: zenoh_flow.DataMessage
+.. autoclass:: zenoh_flow.types.DataMessage
     :members:
 
 InputToken
 -----------
-.. autoclass:: zenoh_flow.InputToken
+.. autoclass:: zenoh_flow.types.InputToken
     :members:
-
-Inputs
---------
-.. autoclass:: zenoh_flow.Inputs
-    :members:
-
-Outputs
---------
-.. autoclass:: zenoh_flow.Outputs
-    :members:
-
 
 LocalDeadlineMiss
 -----------------
-.. autoclass:: zenoh_flow.LocalDeadlineMiss
+.. autoclass:: zenoh_flow.types.LocalDeadlineMiss
     :members:
+
+
+FromDescriptor
+--------------
+.. autoclass:: zenoh_flow.types.FromDescriptor
+    :members:
+
+
+ToDescriptor
+------------
+.. autoclass:: zenoh_flow.types.ToDescriptor
+    :members:
+
+
+E2EDeadlineMiss
+---------------
+.. autoclass:: zenoh_flow.types.E2EDeadlineMiss
+    :members:
+
+Timestamp
+---------
+.. autoclass:: zenoh_flow.types.Timestamp
+    :members:
+
+
+TokenAction
+-----------
+.. autoclass:: zenoh_flow.types.TokenAction
+    :members:
+
+
+TokenStatus
+-----------
+.. autoclass:: zenoh_flow.types.TokenStatus
+    :members:
+

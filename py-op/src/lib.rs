@@ -14,8 +14,8 @@
 
 use pyo3::{prelude::*, types::PyModule};
 use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::convert::TryInto;
+// use std::convert::TryFrom;
+// use std::convert::TryInto;
 use std::fs;
 use std::path::Path;
 use zenoh_flow::runtime::message::DataMessage;
@@ -27,12 +27,12 @@ use zenoh_flow::{
 };
 use zenoh_flow::{Context, Data, ZFError};
 use zenoh_flow_python_types::from_pyerr_to_zferr;
-use zenoh_flow_python_types::utils::{configuration_into_py, outputs_from_py, tokens_into_py};
-use zenoh_flow_python_types::Context as PyContext;
-use zenoh_flow_python_types::InputToken as PyToken;
-use zenoh_flow_python_types::Inputs as PyInputs;
-use zenoh_flow_python_types::LocalDeadlineMiss as PyLocalDeadlineMiss;
-use zenoh_flow_python_types::Outputs as PyOutputs;
+use zenoh_flow_python_types::utils::configuration_into_py; //, outputs_from_py, tokens_into_py};
+                                                           // use zenoh_flow_python_types::Context as PyContext;
+                                                           // use zenoh_flow_python_types::InputToken as PyToken;
+                                                           // use zenoh_flow_python_types::Inputs as PyInputs;
+                                                           // use zenoh_flow_python_types::LocalDeadlineMiss as PyLocalDeadlineMiss;
+                                                           // use zenoh_flow_python_types::Outputs as PyOutputs;
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -49,6 +49,7 @@ pub static PY_LIB: &str = env!("PY_LIB");
 struct PythonState {
     pub module: Arc<PyObject>,
     pub py_state: Arc<PyObject>,
+    pub py_zf_types: Arc<PyObject>,
 }
 unsafe impl Send for PythonState {}
 unsafe impl Sync for PythonState {}
@@ -69,7 +70,7 @@ impl Operator for PyOperator {
         tokens: &mut HashMap<PortId, InputToken>,
     ) -> ZFResult<bool> {
         // Getting tokens for conversion to Python
-        let real_tokens = std::mem::take(tokens);
+        let mut real_tokens = std::mem::take(tokens);
 
         // Preparing python environment
         let gil = Python::acquire_gil();
@@ -78,8 +79,21 @@ impl Operator for PyOperator {
         // Preparing parameters
         let current_state = state.try_get::<PythonState>()?;
         let op_class = current_state.module.as_ref().clone();
-        let py_ctx = PyContext::from(ctx);
-        let py_tokens = tokens_into_py(py, real_tokens);
+
+        let zf_types_module = current_state
+            .py_zf_types
+            .cast_as::<PyModule>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        let py_ctx = zenoh_flow_python_types::from_context_to_pyany(ctx, &py, zf_types_module)?;
+        let py_tokens = zenoh_flow_python_types::from_input_tokens_to_pydict(
+            &mut real_tokens,
+            &py,
+            zf_types_module,
+        )?;
+
+        // let py_ctx = PyContext::from(ctx);
+        // let py_tokens = tokens_into_py(py, real_tokens);
 
         // Calling python code
         let ir_result: bool = op_class
@@ -90,7 +104,7 @@ impl Operator for PyOperator {
                     op_class.clone(),
                     py_ctx,
                     current_state.py_state.as_ref().clone(),
-                    &py_tokens,
+                    py_tokens,
                 ),
             )
             .map_err(|e| from_pyerr_to_zferr(e, &py))?
@@ -98,22 +112,22 @@ impl Operator for PyOperator {
             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
         // Getting back the tokens
-        let py_tokens: HashMap<String, PyToken> = py_tokens
-            .extract(py)
-            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+        // let py_tokens: HashMap<String, PyToken> = py_tokens
+        //     .extract(py)
+        //     .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
         // Converting the tokens to the rust type
-        let new_tokens = {
-            let mut n_tokens = HashMap::new();
-            for (id, t) in py_tokens {
-                n_tokens.insert(id.into(), t.into());
-            }
+        // let new_tokens = {
+        //     let mut n_tokens = HashMap::new();
+        //     for (id, t) in py_tokens {
+        //         n_tokens.insert(id.into(), t.into());
+        //     }
 
-            n_tokens
-        };
+        //     n_tokens
+        // };
 
-        // Update tokens
-        *tokens = new_tokens;
+        // // Getting back the tokens and update tokens
+        *tokens = zenoh_flow_python_types::from_pydict_to_input_tokens(py_tokens, &py)?;
 
         Ok(ir_result)
     }
@@ -131,8 +145,18 @@ impl Operator for PyOperator {
         // Preparing parameters
         let current_state = state.try_get::<PythonState>()?;
         let op_class = current_state.module.as_ref().clone();
-        let py_ctx = PyContext::from(ctx);
-        let py_data = PyInputs::try_from(inputs)?;
+
+        let zf_types_module = current_state
+            .py_zf_types
+            .cast_as::<PyModule>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        let py_ctx = zenoh_flow_python_types::from_context_to_pyany(ctx, &py, zf_types_module)?;
+
+        let py_data = zenoh_flow_python_types::from_inputs_to_pydict(inputs, &py, zf_types_module)?;
+
+        // let py_ctx = PyContext::from(ctx);
+        // let py_data = PyInputs::try_from(inputs)?;
 
         // Call python copde
         let py_values = op_class
@@ -146,17 +170,20 @@ impl Operator for PyOperator {
                     py_data,
                 ),
             )
-            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?
+            .into_ref(py);
+
+        zenoh_flow_python_types::from_pyany_to_run_result(py_values, &py)
 
         // Converting the results
-        outputs_from_py(py, py_values)?.try_into()
+        // outputs_from_py(py, py_values)?.try_into()
     }
 
     fn output_rule(
         &self,
         ctx: &mut Context,
         state: &mut State,
-        outputs: HashMap<PortId, Data>,
+        mut outputs: HashMap<PortId, Data>,
         deadlinemiss: Option<LocalDeadlineMiss>,
     ) -> ZFResult<HashMap<PortId, NodeOutput>> {
         // Preparing python
@@ -166,9 +193,26 @@ impl Operator for PyOperator {
         // Preparing parameters
         let current_state = state.try_get::<PythonState>()?;
         let op_class = current_state.module.as_ref().clone();
-        let py_ctx = PyContext::from(ctx);
-        let py_data = PyOutputs::try_from(outputs)?;
-        let deadline_miss = PyLocalDeadlineMiss::from(deadlinemiss);
+
+        let zf_types_module = current_state
+            .py_zf_types
+            .cast_as::<PyModule>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        let py_ctx = zenoh_flow_python_types::from_context_to_pyany(ctx, &py, zf_types_module)?;
+        let py_data = zenoh_flow_python_types::from_outputs_to_pydict(&mut outputs, &py)?;
+
+        // let py_ctx = PyContext::from(ctx);
+        // let py_data = PyOutputs::try_from(outputs)?;
+        let deadline_miss = match deadlinemiss {
+            Some(deadlinemiss) => Some(zenoh_flow_python_types::from_local_deadline_miss_to_pyany(
+                &deadlinemiss,
+                &py,
+                zf_types_module,
+            )?),
+            None => None,
+        };
+        //PyLocalDeadlineMiss::from(deadlinemiss);
 
         // Calling pthon code
         let py_values = op_class
@@ -183,20 +227,22 @@ impl Operator for PyOperator {
                     deadline_miss,
                 ),
             )
-            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?
+            .into_ref(py);
 
         // Converting the results
-        let py_values = outputs_from_py(py, py_values)?;
+        // let py_values = outputs_from_py(py, py_values)?;
 
         // Generating the rust output
-        let rust_values: HashMap<PortId, Data> = py_values.try_into()?;
+        // let rust_values: HashMap<PortId, Data> = py_values.try_into()?;
 
-        let mut results = HashMap::with_capacity(rust_values.len());
-        for (k, v) in rust_values {
-            results.insert(k, NodeOutput::Data(v));
-        }
+        // let mut results = HashMap::with_capacity(rust_values.len());
+        // for (k, v) in rust_values {
+        //     results.insert(k, NodeOutput::Data(v));
+        // }
+        zenoh_flow_python_types::from_pyany_to_or_result(py_values, &py)
 
-        Ok(results)
+        // Ok(results)
     }
 }
 
@@ -224,6 +270,10 @@ impl Node for PyOperator {
                 let py_config = configuration_into_py(py, py_config)
                     .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
+                let py_zf_types = PyModule::import(py, "zenoh_flow.types")
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
+                    .to_object(py);
+
                 // Load Python code
                 let code = read_file(script_file_path)?;
                 let module =
@@ -246,6 +296,7 @@ impl Node for PyOperator {
                 Ok(State::from(PythonState {
                     module: Arc::new(op_class),
                     py_state: Arc::new(state),
+                    py_zf_types: Arc::new(py_zf_types),
                 }))
             }
             None => Err(ZFError::InvalidState),

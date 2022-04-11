@@ -29,8 +29,8 @@ import zenoh_flow
 # -- Project information -----------------------------------------------------
 
 project = 'zenoh-flow'
-copyright = '2022, ADLINK zenoh team, <zenoh@adlink-labs.tech>'
-author = 'ADLINK zenoh team, <zenoh@adlink-labs.tech>'
+copyright = '2022, ZettaScale Technology'
+author = 'ZettaScale Zenoh Team, <zenoh@zettascale.tech>'
 
 # The full version, including alpha/beta/rc tags
 release = '0.2.0-dev'

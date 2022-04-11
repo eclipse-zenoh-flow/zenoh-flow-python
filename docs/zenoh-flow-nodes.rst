@@ -23,17 +23,17 @@ Zenoh Flow
 
 Source
 ------
-.. autoclass:: zenoh_flow.Source
+.. autoclass:: zenoh_flow.interfaces.Source.Source
     :members:
 
 
 Sink
 ----
-.. autoclass:: zenoh_flow.Sink
+.. autoclass:: zenoh_flow.interfaces.Sink.Sink
     :members:
 
 
 Operator
 --------
-.. autoclass:: zenoh_flow.Operator
+.. autoclass:: zenoh_flow.interfaces.Operator.Operator
     :members:

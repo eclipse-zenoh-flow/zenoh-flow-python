@@ -119,10 +119,12 @@ class InputToken(object):
     '''
         A Zenoh Flow Input Token
     '''
-    def __init__(self, status: TokenStatus,  action: Optional[TokenAction] = None, data: Optional[bytes] = None):
+    def __init__(self, status: TokenStatus,  action: Optional[TokenAction] = None, data: Optional[bytes] = None, timestamp: Optional[Timestamp] = None):
         self.status = status
         self.action = action
         self.data = data
+        self.e2d_deadlines = []
+        self.timestamp = timestamp
 
     def set_action_drop(self) -> None:
         '''
@@ -150,7 +152,7 @@ class InputToken(object):
 
     def get_action(self) -> TokenAction:
         '''
-            Gets the action from the :class:`Token`
+            Gets the action from the :class:`InputToken`
 
             :rtype: str
         '''
@@ -159,7 +161,7 @@ class InputToken(object):
 
     def is_ready(self) -> bool:
         '''
-            Checks if the :class:`Token` is ready.
+            Checks if the :class:`InputToken` is ready.
             i.e. has Data.
 
             :rtype: bool
@@ -168,7 +170,7 @@ class InputToken(object):
 
     def is_pending(self) -> bool:
         '''
-            Checks if the :class:`Token` is pending.
+            Checks if the :class:`InputToken` is pending.
             i.e. has no data.
 
             :rtype: bool
@@ -177,11 +179,19 @@ class InputToken(object):
 
     def get_data(self) -> bytes:
         '''
-            Gets the data from the :class:`Token`
+            Gets the data from the :class:`InputToken`
 
             :rtype: bytes
         '''
         return self.data
+
+    def get_timestamp(self) -> Timestamp:
+        '''
+            Gets the timestamp from the :class:`InputToken`
+
+            :rtype: bytes
+        '''
+        return self.timestamp
 
 
 
@@ -194,9 +204,25 @@ class DataMessage(object):
         `missed_end_to_end_deadlines` list of `E2EDeadlineMiss`
     '''
 
-    def __init__(ts : Timestamp, data: bytes, missed_end_to_end_deadlines: Sequence[E2EDeadlineMiss] ):
-
+    def __init__(self, ts : Timestamp, data: bytes, missed_end_to_end_deadlines: Optional[Sequence[E2EDeadlineMiss]] = []):
         self.ts = ts
         self.data = data
         self.missed_end_to_end_deadlines = missed_end_to_end_deadlines
+
+    def get_data(self):
+        '''
+            Gets the data from the :class:`DataMessage`
+
+            :rtype: bytes
+        '''
+        return self.data
+
+    def get_timestamp(self) -> Timestamp:
+        '''
+            Gets the timestamp from the :class:`DataMessage`
+
+            :rtype: bytes
+        '''
+        return self.ts
+
 

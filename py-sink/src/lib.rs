@@ -14,7 +14,7 @@
 
 use async_trait::async_trait;
 use pyo3::{prelude::*, types::PyModule};
-use std::convert::TryFrom;
+// use std::convert::TryFrom;
 use std::fs;
 use std::path::Path;
 use zenoh_flow::async_std::sync::Arc;
@@ -23,8 +23,8 @@ use zenoh_flow::Configuration;
 use zenoh_flow::{DataMessage, Node, Sink, State, ZFError, ZFResult};
 use zenoh_flow_python_types::from_pyerr_to_zferr;
 use zenoh_flow_python_types::utils::configuration_into_py;
-use zenoh_flow_python_types::Context as PyContext;
-use zenoh_flow_python_types::DataMessage as PyDataMessage;
+// use zenoh_flow_python_types::Context as PyContext;
+// use zenoh_flow_python_types::DataMessage as PyDataMessage;
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -41,6 +41,7 @@ pub static PY_LIB: &str = env!("PY_LIB");
 struct PythonState {
     pub module: Arc<PyObject>,
     pub py_state: Arc<PyObject>,
+    pub py_zf_types: Arc<PyObject>,
 }
 unsafe impl Send for PythonState {}
 unsafe impl Sync for PythonState {}
@@ -60,7 +61,7 @@ impl Sink for PySink {
         &self,
         ctx: &mut zenoh_flow::Context,
         state: &mut State,
-        input: DataMessage,
+        mut input: DataMessage,
     ) -> ZFResult<()> {
         // Preparing python
         let gil = Python::acquire_gil();
@@ -69,8 +70,16 @@ impl Sink for PySink {
         // Preparing parameters
         let current_state = state.try_get::<PythonState>()?;
         let sink_class = current_state.module.as_ref().clone();
-        let py_ctx = PyContext::from(ctx);
-        let py_data = PyDataMessage::try_from(input)?;
+
+        let zf_types_module = current_state
+            .py_zf_types
+            .cast_as::<PyModule>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        let py_ctx = zenoh_flow_python_types::from_context_to_pyany(ctx, &py, zf_types_module)?;
+
+        let py_data =
+            zenoh_flow_python_types::from_data_message_to_pyany(&mut input, &py, zf_types_module)?;
 
         // Calling python
         sink_class
@@ -115,6 +124,10 @@ impl Node for PySink {
                 let py_config = configuration_into_py(py, py_config)
                     .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
+                let py_zf_types = PyModule::import(py, "zenoh_flow.types")
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
+                    .to_object(py);
+
                 // Load Python code
                 let code = read_file(script_file_path)?;
                 let module =
@@ -134,6 +147,7 @@ impl Node for PySink {
                 Ok(State::from(PythonState {
                     module: Arc::new(sink_class),
                     py_state: Arc::new(state),
+                    py_zf_types: Arc::new(py_zf_types),
                 }))
             }
             None => Err(ZFError::InvalidState),

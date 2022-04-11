@@ -22,7 +22,7 @@ use zenoh_flow::Configuration;
 use zenoh_flow::{Data, Node, Source, State, ZFError, ZFResult};
 use zenoh_flow_python_types::from_pyerr_to_zferr;
 use zenoh_flow_python_types::utils::configuration_into_py;
-use zenoh_flow_python_types::Context as PyContext;
+// use zenoh_flow_python_types::Context as PyContext;
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -39,6 +39,7 @@ pub static PY_LIB: &str = env!("PY_LIB");
 struct PythonState {
     pub module: Arc<PyObject>,
     pub py_state: Arc<PyObject>,
+    pub py_zf_types: Arc<PyObject>,
 }
 unsafe impl Send for PythonState {}
 unsafe impl Sync for PythonState {}
@@ -62,10 +63,15 @@ impl Source for PySource {
         // Preparing parameter
         let current_state = state.try_get::<PythonState>()?;
         let source_class = current_state.module.as_ref().clone();
-        let py_ctx = PyContext::from(ctx);
+        let zf_types_module = current_state
+            .py_zf_types
+            .cast_as::<PyModule>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
 
-        // Calling python
-        let value: Vec<u8> = source_class
+        let py_ctx = zenoh_flow_python_types::from_context_to_pyany(ctx, &py, zf_types_module)?;
+        // let source_class = source_class.cast_as::<PyAny>(py).map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        let py_value = source_class
             .call_method1(
                 py,
                 "run",
@@ -76,11 +82,13 @@ impl Source for PySource {
                 ),
             )
             .map_err(|e| from_pyerr_to_zferr(e, &py))?
-            .extract(py)
-            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            .into_ref(py);
+
+        // Calling python
+        let value = zenoh_flow_python_types::from_pyany_to_data(py_value, &py)?;
 
         // Converting to rust types
-        Ok(Data::from_bytes(value))
+        Ok(value)
     }
 }
 
@@ -109,6 +117,10 @@ impl Node for PySource {
                 let py_config = configuration_into_py(py, py_config)
                     .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
+                let py_zf_types = PyModule::import(py, "zenoh_flow.types")
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
+                    .to_object(py);
+
                 // Load Python code
                 let code = read_file(script_file_path)?;
                 let module =
@@ -128,6 +140,7 @@ impl Node for PySource {
                 Ok(State::from(PythonState {
                     module: Arc::new(source_class),
                     py_state: Arc::new(state),
+                    py_zf_types: Arc::new(py_zf_types),
                 }))
             }
             None => Err(ZFError::InvalidState),
