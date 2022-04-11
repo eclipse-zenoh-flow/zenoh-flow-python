@@ -12,6 +12,7 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 
+use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PyString};
 use std::collections::HashMap;
@@ -25,7 +26,23 @@ use zenoh_flow::runtime::token::{DataToken, InputToken, TokenAction};
 use zenoh_flow::types::{Data, NodeOutput};
 use zenoh_flow::{Context, PortId, ZFError, ZFResult};
 
-pub mod utils;
+use zenoh_flow::async_std::sync::Arc;
+use zenoh_flow::zenoh_flow_derive::ZFState;
+
+#[derive(ZFState, Clone)]
+pub struct PythonState {
+    pub module: Arc<PyObject>,
+    pub py_state: Arc<PyObject>,
+    pub py_zf_types: Arc<PyObject>,
+}
+unsafe impl Send for PythonState {}
+unsafe impl Sync for PythonState {}
+
+impl std::fmt::Debug for PythonState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PythonState").finish()
+    }
+}
 
 pub fn from_pyerr_to_zferr(py_err: pyo3::PyErr, py: &pyo3::Python<'_>) -> ZFError {
     let tb = if let Some(traceback) = py_err.traceback(*py) {
@@ -616,4 +633,56 @@ pub fn from_pyany_to_or_result<'a>(
     }
 
     Ok(outputs)
+}
+
+pub fn configuration_into_py(py: Python, value: zenoh_flow::Configuration) -> PyResult<PyObject> {
+    match value {
+        zenoh_flow::Configuration::Array(arr) => {
+            let py_list = PyList::empty(py);
+            for v in arr {
+                py_list.append(configuration_into_py(py, v)?)?;
+            }
+            Ok(py_list.to_object(py))
+        }
+        zenoh_flow::Configuration::Object(obj) => {
+            let py_dict = PyDict::new(py);
+            for (k, v) in obj {
+                py_dict.set_item(k, configuration_into_py(py, v)?)?;
+            }
+            Ok(py_dict.to_object(py))
+        }
+        zenoh_flow::Configuration::Bool(b) => Ok(b.to_object(py)),
+        zenoh_flow::Configuration::Number(n) => {
+            if n.is_i64() {
+                Ok(n.as_i64()
+                    .ok_or_else(|| {
+                        PyErr::from_value(
+                            PyTypeError::new_err(format!("Unable to convert {:?} to i64", n))
+                                .value(py),
+                        )
+                    })?
+                    .to_object(py))
+            } else if n.is_u64() {
+                Ok(n.as_u64()
+                    .ok_or_else(|| {
+                        PyErr::from_value(
+                            PyTypeError::new_err(format!("Unable to convert {:?} to u64", n))
+                                .value(py),
+                        )
+                    })?
+                    .to_object(py))
+            } else {
+                Ok(n.as_f64()
+                    .ok_or_else(|| {
+                        PyErr::from_value(
+                            PyTypeError::new_err(format!("Unable to convert {:?} to f64", n))
+                                .value(py),
+                        )
+                    })?
+                    .to_object(py))
+            }
+        }
+        zenoh_flow::Configuration::String(s) => Ok(s.to_object(py)),
+        zenoh_flow::Configuration::Null => Ok(py.None()),
+    }
 }

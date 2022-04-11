@@ -13,7 +13,7 @@
 #
 
 [package]
-name = "zenoh-flow-python-types"
+name = "zenoh-flow-python-common"
 version = "0.2.0"
 edition = "2018"
 
@@ -30,6 +30,6 @@ abi-py37 = ["pyo3/abi3-py37"]
 default = ["abi-py37"]
 
 #[lib]
-#name = "zenoh_flow_python_types"
+#name = "zenoh_flow_python_common"
 #crate-type=["dylib"]
 #path="src/lib.rs"

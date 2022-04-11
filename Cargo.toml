@@ -15,8 +15,7 @@
 [workspace]
 
 members = [
-  #"zenoh-flow-python",
-  "zenoh-flow-python-types",
+  "zenoh-flow-python-common",
   "py-source",
   "py-sink",
   "py-op",

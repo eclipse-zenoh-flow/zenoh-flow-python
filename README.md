@@ -12,7 +12,7 @@
 
 - Rust: see the [installation page](https://www.rust-lang.org/tools/install)
 - a matching version of libpython. On linux systems, it's typically packaged separately as ``libpython3.x-dev` or `python3.x-dev`.
-- Python >= 3.6
+- Python >= 3.7
 - pip >= 19.3.1
 - virtualenv
 
@@ -37,8 +37,6 @@ $ source venv/bin/activate
 (venv) $ cd zenoh-flow-python/zenoh-flow-python
 (venv) $ pip3 install -r requirements-dev.txt
 (venv) $ python setup.py bdist_wheel
-...
-📦 Built wheel for abi3 Python ≥ 3.6 to /path/to/zenoh-flow-python/target/wheels/zenoh_flow_python-0.1.0-cp36-abi3-macosx_10_7_x86_64.whl
 ```
 
 **Deactivate** the venv and install the python bindings.

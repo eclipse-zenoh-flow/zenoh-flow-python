@@ -1,7 +1,7 @@
 extensions:
   - name: python
     file_extension: py
-    source_lib: /home/ato/Workspace/new-zf-python/target/release/libpy_source.so
-    sink_lib: /home/ato/Workspace/new-zf-python/target/release/libpy_sink.so
-    operator_lib: /home/ato/Workspace/new-zf-python/target/release/libpy_op.so
+    source_lib: ./target/release/libpy_source.so
+    sink_lib: ./target/release/libpy_sink.so
+    operator_lib: ./target/release/libpy_op.so
     config_lib_key: python-script

@@ -30,7 +30,7 @@ readme = "README.md"
 
 [dependencies]
 zenoh-flow = { git = "https://github.com/eclipse-zenoh/zenoh-flow.git", branch = "master"}
-zenoh-flow-python-types = {path = "../zenoh-flow-python-types/"}
+zenoh-flow-python-common = {path = "../zenoh-flow-python-common/"}
 pyo3 = "0.16"
 log = "0.4"
 libloading = "0.7"

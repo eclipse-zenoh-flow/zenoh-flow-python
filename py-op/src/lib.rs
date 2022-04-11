@@ -14,25 +14,22 @@
 
 use pyo3::{prelude::*, types::PyModule};
 use std::collections::HashMap;
-// use std::convert::TryFrom;
-// use std::convert::TryInto;
 use std::fs;
 use std::path::Path;
 use zenoh_flow::runtime::message::DataMessage;
-use zenoh_flow::zenoh_flow_derive::ZFState;
 use zenoh_flow::Configuration;
 use zenoh_flow::{
     async_std::sync::Arc, export_operator, types::ZFResult, InputToken, LocalDeadlineMiss, Node,
     NodeOutput, Operator, PortId, State,
 };
 use zenoh_flow::{Context, Data, ZFError};
-use zenoh_flow_python_types::from_pyerr_to_zferr;
-use zenoh_flow_python_types::utils::configuration_into_py; //, outputs_from_py, tokens_into_py};
-                                                           // use zenoh_flow_python_types::Context as PyContext;
-                                                           // use zenoh_flow_python_types::InputToken as PyToken;
-                                                           // use zenoh_flow_python_types::Inputs as PyInputs;
-                                                           // use zenoh_flow_python_types::LocalDeadlineMiss as PyLocalDeadlineMiss;
-                                                           // use zenoh_flow_python_types::Outputs as PyOutputs;
+use zenoh_flow_python_common::configuration_into_py;
+use zenoh_flow_python_common::PythonState;
+use zenoh_flow_python_common::{
+    from_context_to_pyany, from_input_tokens_to_pydict, from_inputs_to_pydict,
+    from_local_deadline_miss_to_pyany, from_outputs_to_pydict, from_pyany_to_or_result,
+    from_pyany_to_run_result, from_pydict_to_input_tokens, from_pyerr_to_zferr,
+};
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -44,21 +41,6 @@ static LOAD_FLAGS: std::os::raw::c_int =
     libloading::os::unix::RTLD_NOW | libloading::os::unix::RTLD_GLOBAL;
 
 pub static PY_LIB: &str = env!("PY_LIB");
-
-#[derive(ZFState, Clone)]
-struct PythonState {
-    pub module: Arc<PyObject>,
-    pub py_state: Arc<PyObject>,
-    pub py_zf_types: Arc<PyObject>,
-}
-unsafe impl Send for PythonState {}
-unsafe impl Sync for PythonState {}
-
-impl std::fmt::Debug for PythonState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PythonState").finish()
-    }
-}
 
 struct PyOperator(Library);
 
@@ -85,12 +67,8 @@ impl Operator for PyOperator {
             .cast_as::<PyModule>(py)
             .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
 
-        let py_ctx = zenoh_flow_python_types::from_context_to_pyany(ctx, &py, zf_types_module)?;
-        let py_tokens = zenoh_flow_python_types::from_input_tokens_to_pydict(
-            &mut real_tokens,
-            &py,
-            zf_types_module,
-        )?;
+        let py_ctx = from_context_to_pyany(ctx, &py, zf_types_module)?;
+        let py_tokens = from_input_tokens_to_pydict(&mut real_tokens, &py, zf_types_module)?;
 
         // let py_ctx = PyContext::from(ctx);
         // let py_tokens = tokens_into_py(py, real_tokens);
@@ -127,7 +105,7 @@ impl Operator for PyOperator {
         // };
 
         // // Getting back the tokens and update tokens
-        *tokens = zenoh_flow_python_types::from_pydict_to_input_tokens(py_tokens, &py)?;
+        *tokens = from_pydict_to_input_tokens(py_tokens, &py)?;
 
         Ok(ir_result)
     }
@@ -151,9 +129,9 @@ impl Operator for PyOperator {
             .cast_as::<PyModule>(py)
             .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
 
-        let py_ctx = zenoh_flow_python_types::from_context_to_pyany(ctx, &py, zf_types_module)?;
+        let py_ctx = from_context_to_pyany(ctx, &py, zf_types_module)?;
 
-        let py_data = zenoh_flow_python_types::from_inputs_to_pydict(inputs, &py, zf_types_module)?;
+        let py_data = from_inputs_to_pydict(inputs, &py, zf_types_module)?;
 
         // let py_ctx = PyContext::from(ctx);
         // let py_data = PyInputs::try_from(inputs)?;
@@ -173,7 +151,7 @@ impl Operator for PyOperator {
             .map_err(|e| from_pyerr_to_zferr(e, &py))?
             .into_ref(py);
 
-        zenoh_flow_python_types::from_pyany_to_run_result(py_values, &py)
+        from_pyany_to_run_result(py_values, &py)
 
         // Converting the results
         // outputs_from_py(py, py_values)?.try_into()
@@ -199,13 +177,13 @@ impl Operator for PyOperator {
             .cast_as::<PyModule>(py)
             .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
 
-        let py_ctx = zenoh_flow_python_types::from_context_to_pyany(ctx, &py, zf_types_module)?;
-        let py_data = zenoh_flow_python_types::from_outputs_to_pydict(&mut outputs, &py)?;
+        let py_ctx = from_context_to_pyany(ctx, &py, zf_types_module)?;
+        let py_data = from_outputs_to_pydict(&mut outputs, &py)?;
 
         // let py_ctx = PyContext::from(ctx);
         // let py_data = PyOutputs::try_from(outputs)?;
         let deadline_miss = match deadlinemiss {
-            Some(deadlinemiss) => Some(zenoh_flow_python_types::from_local_deadline_miss_to_pyany(
+            Some(deadlinemiss) => Some(from_local_deadline_miss_to_pyany(
                 &deadlinemiss,
                 &py,
                 zf_types_module,
@@ -231,18 +209,7 @@ impl Operator for PyOperator {
             .into_ref(py);
 
         // Converting the results
-        // let py_values = outputs_from_py(py, py_values)?;
-
-        // Generating the rust output
-        // let rust_values: HashMap<PortId, Data> = py_values.try_into()?;
-
-        // let mut results = HashMap::with_capacity(rust_values.len());
-        // for (k, v) in rust_values {
-        //     results.insert(k, NodeOutput::Data(v));
-        // }
-        zenoh_flow_python_types::from_pyany_to_or_result(py_values, &py)
-
-        // Ok(results)
+        from_pyany_to_or_result(py_values, &py)
     }
 }
 

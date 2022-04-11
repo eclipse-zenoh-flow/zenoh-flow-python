@@ -17,12 +17,11 @@ use pyo3::{prelude::*, types::PyModule};
 use std::fs;
 use std::path::Path;
 use zenoh_flow::async_std::sync::Arc;
-use zenoh_flow::zenoh_flow_derive::ZFState;
 use zenoh_flow::Configuration;
 use zenoh_flow::{Data, Node, Source, State, ZFError, ZFResult};
-use zenoh_flow_python_types::from_pyerr_to_zferr;
-use zenoh_flow_python_types::utils::configuration_into_py;
-// use zenoh_flow_python_types::Context as PyContext;
+use zenoh_flow_python_common::configuration_into_py;
+use zenoh_flow_python_common::PythonState;
+use zenoh_flow_python_common::{from_pyany_to_data, from_pyerr_to_zferr};
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -34,21 +33,6 @@ static LOAD_FLAGS: std::os::raw::c_int =
     libloading::os::unix::RTLD_NOW | libloading::os::unix::RTLD_GLOBAL;
 
 pub static PY_LIB: &str = env!("PY_LIB");
-
-#[derive(ZFState, Clone)]
-struct PythonState {
-    pub module: Arc<PyObject>,
-    pub py_state: Arc<PyObject>,
-    pub py_zf_types: Arc<PyObject>,
-}
-unsafe impl Send for PythonState {}
-unsafe impl Sync for PythonState {}
-
-impl std::fmt::Debug for PythonState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PythonState").finish()
-    }
-}
 
 #[derive(Debug)]
 struct PySource(Library);
@@ -68,8 +52,7 @@ impl Source for PySource {
             .cast_as::<PyModule>(py)
             .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
 
-        let py_ctx = zenoh_flow_python_types::from_context_to_pyany(ctx, &py, zf_types_module)?;
-        // let source_class = source_class.cast_as::<PyAny>(py).map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+        let py_ctx = zenoh_flow_python_common::from_context_to_pyany(ctx, &py, zf_types_module)?;
 
         let py_value = source_class
             .call_method1(
@@ -85,7 +68,7 @@ impl Source for PySource {
             .into_ref(py);
 
         // Calling python
-        let value = zenoh_flow_python_types::from_pyany_to_data(py_value, &py)?;
+        let value = from_pyany_to_data(py_value, &py)?;
 
         // Converting to rust types
         Ok(value)
