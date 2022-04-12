@@ -13,11 +13,11 @@
 #
 
 from zenoh_flow.types import Context, InputToken, LocalDeadlineMiss, DataMessage
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 class Operator(object):
 
-    def input_rule(self, context: Context, state, tokens: Dict[str, InputToken]) -> bool:
+    def input_rule(self, context: Context, state : Any, tokens: Dict[str, InputToken]) -> bool:
         """
             The input_rule method is called by the zenoh flow runtime.
             This method is called when data is received on one or more inputs.
@@ -37,7 +37,7 @@ class Operator(object):
 
         raise NotImplementedError("Please implement your own method, Operator is an interface")
 
-    def output_rule(self, context: Context, state, outputs : Dict[str, bytes] , deadline_miss: Optional[LocalDeadlineMiss] = None) -> Dict[str, bytes]:
+    def output_rule(self, context: Context, state : Any, outputs : Dict[str, bytes] , deadline_miss: Optional[LocalDeadlineMiss] = None) -> Dict[str, bytes]:
         """
             The output_rule method is called by the zenoh flow runtime.
             This method is called when data is produced from the run.
@@ -56,7 +56,7 @@ class Operator(object):
         """
         raise NotImplementedError("Please implement your own method, Operator is an interface")
 
-    def run(self, context: Context, state, inputs: Dict[str, DataMessage]) -> Dict[str, bytes]:
+    def run(self, context: Context, state : Any, inputs: Dict[str, DataMessage]) -> Dict[str, bytes]:
         """
             The run method is called by the zenoh flow runtime.
             This method is called when the result of input_rule is true.
@@ -75,7 +75,7 @@ class Operator(object):
         """
         raise NotImplementedError("Please implement your own method, Operator is an interface")
 
-    def initialize(self, configuration: dict):
+    def initialize(self, configuration: dict) -> Any:
         """
             The initialize method is called by the zenoh flow runtime.
             This method is called when starting the data flow graph.
@@ -91,7 +91,7 @@ class Operator(object):
         """
         raise NotImplementedError("Please implement your own method, Operator is an interface")
 
-    def finalize(self, state) -> None:
+    def finalize(self, state : Any) -> None:
         """
             The finalize method is called by the zenoh flow runtime.
             This method is called when stopping the data flow graph.

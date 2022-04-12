@@ -14,125 +14,149 @@
 
 
 '''
- The zenoh flow Python API.
-
- This API it's NOT meant to be used directly, instead your operators, sink
- and sources have to implement the methods provided by the different classes.
- A .py can contain only one graph node.
- Each .py needs to contain a register function that takes no parameter
- and returns the node.
-
- def register():
-     return MyGraphNode
+The Zenoh Flow Python API.
 
 
- Below some examples for simple source, sink and operator.
+The *zenoh-flow-python* library provides a set of Python interfaces to write your
+operators, source and sink for Zenoh Flow.
 
- Examples:
- ~~~~~~~~
+This API it's NOT meant to be used directly, instead your operators, sink
+and sources have to implement the methods provided by th classes.
+A .py file can contain only one graph node.
 
+Each .py file needs to contain a register function that takes no parameter
+and returns the node.
 
- Source:
- """"""""
+.. code-block:: python
 
- from zenoh_flow import Inputs, Outputs, Source
- import time
-
- class MyState:
-     def __init__(self, configuration):
-         self.value = 0
-         if configuration['value'] is not None:
-             self.value = int(configuration['value'])
-
- class MySrc(Source):
-    def initialize(self, configuration):
-         return MyState(configuration)
-     def finalize(self, state):
-         return None
-     def run(self, _ctx, state):
-         state.value += 1
-         time.sleep(1)
-         return int_to_bytes(state.value)
-
- def int_to_bytes(x: int) -> bytes:
-     return x.to_bytes((x.bit_length() + 7) // 8, 'big')
- def register():
-     return MySrc
- """"""""
+    def register():
+        return MyGraphNode
 
 
- Sink:
- """"""""
- from zenoh_flow import Sink
+Below some examples for simple source, sink and operator.
 
- class MySink(Sink):
-     def initialize(self, configuration):
-         return None
-     def finalize(self, state):
-         return None
-     def run(self, _ctx, _state, input):
-         print(f"Received {input}")
+Examples:
+~~~~~~~~~
 
- def register():
-     return MySink
-""""""""""
+In the following you can find examples of soucres, sinks and operators.
+
+Source:
+"""""""
+.. code-block:: python
+
+    from zenoh_flow.interfaces import Source
+    import time
+
+    class MyState:
+        def __init__(self, configuration):
+            self.value = 0
+            if configuration['value'] is not None:
+                self.value = int(configuration['value'])
+
+    class MySrc(Source):
+        def initialize(self, configuration):
+            return MyState(configuration)
+
+        def finalize(self, state):
+            return None
+
+        def run(self, _ctx, state):
+            state.value += 1
+            time.sleep(1)
+            return int_to_bytes(state.value)
+
+    def int_to_bytes(x: int) -> bytes:
+        return x.to_bytes((x.bit_length() + 7) // 8, 'big')
+
+    def register():
+        return MySrc
 
 
- Operator:
- """"""""
- from zenoh_flow import Inputs, Operator, Outputs
- class MyState:
-     def __init__(self):
-         self.value = 0
-     def inc(self):
-         self.value += 1
-     def mod_2(self):
-         return (self.value % 2)
-     def mod_3(self):
-         return (self.value % 3)
 
- class MyOp(Operator):
-     def initialize(self, configuration):
-          return MyState()
-     def finalize(self, state):
-         return None
-     def input_rule(self, _ctx, state, tokens):
-         # Using input rules
-         state.inc()
-         token = tokens.get('Data')
-         if state.mod_2():
-             token.set_action_consume()
-             return True
-         elif state.mod_3():
-             token.set_action_keep()
-             return True
-         else:
-             token.set_action_drop()
-             return False
+Sink:
+"""""
 
-     def output_rule(self, _ctx, _state, outputs, _deadline_miss):
-         return outputs
+.. code-block:: python
 
-     def run(self, _ctx, _state, inputs):
-         # Getting the inputs
-         data = inputs.get('Data').data
+    from zenoh_flow.interfaces import Sink
 
-         # Computing over the inputs
-         int_data = int_from_bytes(data)
-         int_data = int_data * 2
-         # Producing the outputs
-         outputs = {'Data' : int_to_bytes(int_data)}
-         return outputs
+    class MySink(Sink):
+        def initialize(self, configuration):
+            return None
 
- def int_to_bytes(x: int) -> bytes:
-     return x.to_bytes((x.bit_length() + 7) // 8, 'big')
+        def finalize(self, state):
+            return None
 
- def int_from_bytes(xbytes: bytes) -> int:
-     return int.from_bytes(xbytes, 'big')
+        def run(self, _ctx, _state, input):
+            print(f"Received {input}")
 
- def register():
-     return MyOp
- """"""""""""
+    def register():
+        return MySink
+
+
+
+Operator:
+"""""""""
+.. code-block:: python
+
+    from zenoh_flow.interfaces import Operator
+
+    class MyState:
+        def __init__(self):
+            self.value = 0
+
+        def inc(self):
+            self.value += 1
+
+        def mod_2(self):
+            return (self.value % 2)
+
+        def mod_3(self):
+            return (self.value % 3)
+
+    class MyOp(Operator):
+        def initialize(self, configuration):
+            return MyState()
+
+        def finalize(self, state):
+            return None
+
+        def input_rule(self, _ctx, state, tokens):
+            # Using input rules
+            state.inc()
+            token = tokens.get('Data')
+            if state.mod_2():
+                token.set_action_consume()
+                return True
+            elif state.mod_3():
+                token.set_action_keep()
+                return True
+            else:
+                token.set_action_drop()
+                return False
+
+        def output_rule(self, _ctx, _state, outputs, _deadline_miss = None):
+            return outputs
+
+        def run(self, _ctx, _state, inputs):
+            # Getting the inputs
+            data = inputs.get('Data').get_data()
+
+            # Computing over the inputs
+            int_data = int_from_bytes(data)
+            int_data = int_data * 2
+            # Producing the outputs
+            outputs = {'Data' : int_to_bytes(int_data)}
+            return outputs
+
+    def int_to_bytes(x: int) -> bytes:
+        return x.to_bytes((x.bit_length() + 7) // 8, 'big')
+
+    def int_from_bytes(xbytes: bytes) -> int:
+        return int.from_bytes(xbytes, 'big')
+
+    def register():
+        return MyOp
 
 '''
 

@@ -26,8 +26,8 @@ setup(
     description="The python API for Eclipse zenoh flow",
     long_description=readme(),
     long_description_content_type='text/markdown',
-    author="ADLINK zenoh team",
-    author_email="zenoh@adlink-labs.tech",
+    author="ZettaScale Zenoh Team",
+    author_email="zenoh@zettascale.tech",
     license="EPL-2.0 OR Apache-2.0",
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",

@@ -15,12 +15,13 @@
 
 
 from zenoh_flow.types import Context
+from typing import Any
 
 class Source(object):
     '''
         The class representing a Zenoh Flow source
     '''
-    def run(self, context: Context, state) -> bytes:
+    def run(self, context: Context, state: Any) -> bytes:
         '''
             The run method is called by the zenoh flow runtime.
             This method is expected to produce data whenever it is called.
@@ -30,7 +31,7 @@ class Source(object):
         '''
         raise NotImplementedError("Please implement your own method, Source is an interface")
 
-    def initialize(self, configuration: dict):
+    def initialize(self, configuration: dict) -> Any:
         '''
             The initialize method is called by the zenoh flow runtime.
             This method is called when starting the data flow graph.
@@ -46,7 +47,7 @@ class Source(object):
         '''
         raise NotImplementedError("Please implement your own method, Source is an interface")
 
-    def finalize(self, state) -> None:
+    def finalize(self, state: Any) -> None:
         '''
             The finalize method is called by the zenoh flow runtime.
             This method is called when stopping the data flow graph.

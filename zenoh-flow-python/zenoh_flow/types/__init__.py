@@ -209,7 +209,7 @@ class DataMessage(object):
         self.data = data
         self.missed_end_to_end_deadlines = missed_end_to_end_deadlines
 
-    def get_data(self):
+    def get_data(self) -> bytes:
         '''
             Gets the data from the :class:`DataMessage`
 
