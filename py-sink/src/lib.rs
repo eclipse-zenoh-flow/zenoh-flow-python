@@ -14,7 +14,6 @@
 
 use async_trait::async_trait;
 use pyo3::{prelude::*, types::PyModule};
-// use std::convert::TryFrom;
 use std::fs;
 use std::path::Path;
 use zenoh_flow::async_std::sync::Arc;
@@ -54,7 +53,16 @@ impl Sink for PySink {
 
         // Preparing parameters
         let current_state = state.try_get::<PythonState>()?;
-        let sink_class = current_state.module.as_ref().clone();
+
+        let py_sink = current_state
+            .module
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        let py_state = current_state
+            .py_state
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
 
         let zf_types_module = current_state
             .py_zf_types
@@ -66,17 +74,8 @@ impl Sink for PySink {
         let py_data = from_data_message_to_pyany(&mut input, &py, zf_types_module)?;
 
         // Calling python
-        sink_class
-            .call_method1(
-                py,
-                "run",
-                (
-                    sink_class.clone(),
-                    py_ctx,
-                    current_state.py_state.as_ref().clone(),
-                    py_data,
-                ),
-            )
+        py_sink
+            .call_method1("run", (py_sink, py_ctx, py_state, py_data))
             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
         Ok(())
@@ -118,18 +117,18 @@ impl Node for PySink {
                     PyModule::from_code(py, &code, &script_file_path.to_string_lossy(), "sink")
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?;
                 // Getting the correct python module
-                let sink_class: PyObject = module
+                let sink_class = module
                     .call_method0("register")
-                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                    .into();
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                 // Initialize python state
                 let state: PyObject = sink_class
-                    .call_method1(py, "initialize", (sink_class.clone(), py_config))
-                    .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+                    .call_method1("initialize", (sink_class, py_config))
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
+                    .into();
 
                 Ok(State::from(PythonState {
-                    module: Arc::new(sink_class),
+                    module: Arc::new(sink_class.into()),
                     py_state: Arc::new(state),
                     py_zf_types: Arc::new(py_zf_types),
                 }))
@@ -142,14 +141,19 @@ impl Node for PySink {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let current_state = state.try_get::<PythonState>()?;
-        let sink_class = current_state.module.as_ref().clone();
 
-        sink_class
-            .call_method1(
-                py,
-                "finalize",
-                (sink_class.clone(), current_state.py_state.as_ref().clone()),
-            )
+        let py_state = current_state
+            .py_state
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        let py_sink = current_state
+            .module
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        py_sink
+            .call_method1("finalize", (py_sink, py_state))
             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
         Ok(())
@@ -162,7 +166,7 @@ zenoh_flow::export_sink!(register);
 fn load_self() -> ZFResult<Library> {
     log::trace!("Python Sink Wrapper loading Python {}", PY_LIB);
 
-    // Very dirty hack!
+    // Very dirty hack! We explicit load the python library!
     let lib_name = libloading::library_filename(PY_LIB);
     unsafe {
         #[cfg(target_family = "unix")]

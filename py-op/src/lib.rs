@@ -12,6 +12,7 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 
+use pyo3::types::PyBool;
 use pyo3::{prelude::*, types::PyModule};
 use std::collections::HashMap;
 use std::fs;
@@ -60,7 +61,6 @@ impl Operator for PyOperator {
 
         // Preparing parameters
         let current_state = state.try_get::<PythonState>()?;
-        let op_class = current_state.module.as_ref().clone();
 
         let zf_types_module = current_state
             .py_zf_types
@@ -70,22 +70,23 @@ impl Operator for PyOperator {
         let py_ctx = from_context_to_pyany(ctx, &py, zf_types_module)?;
         let py_tokens = from_input_tokens_to_pydict(&mut real_tokens, &py, zf_types_module)?;
 
+        let py_op = current_state
+            .module
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        let py_state = current_state
+            .py_state
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
 
         // Calling python code
-        let ir_result: bool = op_class
-            .call_method1(
-                py,
-                "input_rule",
-                (
-                    op_class.clone(),
-                    py_ctx,
-                    current_state.py_state.as_ref().clone(),
-                    py_tokens,
-                ),
-            )
+        let ir_result = py_op
+            .call_method1("input_rule", (py_op, py_ctx, py_state, py_tokens))
             .map_err(|e| from_pyerr_to_zferr(e, &py))?
-            .extract(py)
-            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            .cast_as::<PyBool>()
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?
+            .is_true();
 
         // // Getting back the tokens and update tokens
         *tokens = from_pydict_to_input_tokens(py_tokens, &py)?;
@@ -105,7 +106,17 @@ impl Operator for PyOperator {
 
         // Preparing parameters
         let current_state = state.try_get::<PythonState>()?;
-        let op_class = current_state.module.as_ref().clone();
+
+        let py_op = current_state
+            .module
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        let py_state = current_state
+            .py_state
+            .as_ref()
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
 
         let zf_types_module = current_state
             .py_zf_types
@@ -116,26 +127,13 @@ impl Operator for PyOperator {
 
         let py_data = from_inputs_to_pydict(inputs, &py, zf_types_module)?;
 
+        //Call python code
+        let py_values = py_op
+            .call_method1("run", (py_op, py_ctx, py_state, py_data))
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-        // Call python copde
-        let py_values = op_class
-            .call_method1(
-                py,
-                "run",
-                (
-                    op_class.clone(),
-                    py_ctx,
-                    current_state.py_state.as_ref().clone(),
-                    py_data,
-                ),
-            )
-            .map_err(|e| from_pyerr_to_zferr(e, &py))?
-            .into_ref(py);
-
-            // Converting the results
+        // Converting the results
         from_pyany_to_run_result(py_values, &py)
-
-
     }
 
     fn output_rule(
@@ -151,7 +149,18 @@ impl Operator for PyOperator {
 
         // Preparing parameters
         let current_state = state.try_get::<PythonState>()?;
-        let op_class = current_state.module.as_ref().clone();
+        // let op_class = current_state.module.as_ref();
+
+        let py_op = current_state
+            .module
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        let py_state = current_state
+            .py_state
+            .as_ref()
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
 
         let zf_types_module = current_state
             .py_zf_types
@@ -161,36 +170,24 @@ impl Operator for PyOperator {
         let py_ctx = from_context_to_pyany(ctx, &py, zf_types_module)?;
         let py_data = from_outputs_to_pydict(&mut outputs, &py)?;
 
+        // Call python
         let py_values = match deadlinemiss {
-            Some(deadlinemiss) => op_class
+            Some(deadlinemiss) => py_op
                 .call_method1(
-                    py,
                     "output_rule",
                     (
-                        op_class.clone(),
+                        py_op,
                         py_ctx,
-                        current_state.py_state.as_ref().clone(),
+                        py_state,
                         py_data,
                         from_local_deadline_miss_to_pyany(&deadlinemiss, &py, zf_types_module)?,
                     ),
                 )
-                .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                .into_ref(py),
-            None => op_class
-                .call_method1(
-                    py,
-                    "output_rule",
-                    (
-                        op_class.clone(),
-                        py_ctx,
-                        current_state.py_state.as_ref().clone(),
-                        py_data,
-                    ),
-                )
-                .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                .into_ref(py),
+                .map_err(|e| from_pyerr_to_zferr(e, &py))?,
+            None => py_op
+                .call_method1("output_rule", (py_op, py_ctx, py_state, py_data))
+                .map_err(|e| from_pyerr_to_zferr(e, &py))?,
         };
-
         // Converting the results
         from_pyany_to_or_result(py_values, &py)
     }
@@ -231,18 +228,18 @@ impl Node for PyOperator {
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                 // Getting the correct python module
-                let op_class: PyObject = module
+                let op_class = module
                     .call_method0("register")
-                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                    .into();
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                 // Initialize python state
                 let state: PyObject = op_class
-                    .call_method1(py, "initialize", (op_class.clone(), py_config))
-                    .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+                    .call_method1("initialize", (op_class, py_config))
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
+                    .into();
 
                 Ok(State::from(PythonState {
-                    module: Arc::new(op_class),
+                    module: Arc::new(op_class.into()),
                     py_state: Arc::new(state),
                     py_zf_types: Arc::new(py_zf_types),
                 }))
@@ -255,14 +252,20 @@ impl Node for PyOperator {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let current_state = state.try_get::<PythonState>()?;
-        let op_class = current_state.module.as_ref().clone();
 
-        op_class
-            .call_method1(
-                py,
-                "finalize",
-                (op_class.clone(), current_state.py_state.as_ref().clone()),
-            )
+        let py_op = current_state
+            .module
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        let py_state = current_state
+            .py_state
+            .as_ref()
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        py_op
+            .call_method1("finalize", (py_op, py_state))
             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
         Ok(())
@@ -273,7 +276,7 @@ export_operator!(register);
 
 fn load_self() -> ZFResult<Library> {
     log::trace!("Python Operator Wrapper loading Python {}", PY_LIB);
-    // Very dirty hack!
+    // Very dirty hack! We explicit load the python library!
     let lib_name = libloading::library_filename(PY_LIB);
     unsafe {
         #[cfg(target_family = "unix")]

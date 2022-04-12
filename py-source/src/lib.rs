@@ -19,8 +19,8 @@ use std::path::Path;
 use zenoh_flow::async_std::sync::Arc;
 use zenoh_flow::Configuration;
 use zenoh_flow::{Data, Node, Source, State, ZFError, ZFResult};
-use zenoh_flow_python_common::configuration_into_py;
 use zenoh_flow_python_common::PythonState;
+use zenoh_flow_python_common::{configuration_into_py, from_context_to_pyany};
 use zenoh_flow_python_common::{from_pyany_to_data, from_pyerr_to_zferr};
 
 #[cfg(target_family = "unix")]
@@ -46,32 +46,31 @@ impl Source for PySource {
 
         // Preparing parameter
         let current_state = state.try_get::<PythonState>()?;
-        let source_class = current_state.module.as_ref().clone();
+
+        let py_src = current_state
+            .module
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        let py_state = current_state
+            .py_state
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
         let zf_types_module = current_state
             .py_zf_types
             .cast_as::<PyModule>(py)
             .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
 
-        let py_ctx = zenoh_flow_python_common::from_context_to_pyany(ctx, &py, zf_types_module)?;
-
-        let py_value = source_class
-            .call_method1(
-                py,
-                "run",
-                (
-                    source_class.clone(),
-                    py_ctx,
-                    current_state.py_state.as_ref().clone(),
-                ),
-            )
-            .map_err(|e| from_pyerr_to_zferr(e, &py))?
-            .into_ref(py);
+        let py_ctx = from_context_to_pyany(ctx, &py, zf_types_module)?;
 
         // Calling python
-        let value = from_pyany_to_data(py_value, &py)?;
+        let py_value = py_src
+            .call_method1("run", (py_src, py_ctx, py_state))
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
         // Converting to rust types
-        Ok(value)
+        from_pyany_to_data(py_value, &py)
     }
 }
 
@@ -109,19 +108,20 @@ impl Node for PySource {
                 let module =
                     PyModule::from_code(py, &code, &script_file_path.to_string_lossy(), "source")
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+
                 // Getting the correct python module
-                let source_class: PyObject = module
+                let source_class = module
                     .call_method0("register")
-                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                    .into();
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                 // Initialize python state
                 let state: PyObject = source_class
-                    .call_method1(py, "initialize", (source_class.clone(), py_config))
-                    .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+                    .call_method1("initialize", (source_class, py_config))
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
+                    .into();
 
                 Ok(State::from(PythonState {
-                    module: Arc::new(source_class),
+                    module: Arc::new(source_class.into()),
                     py_state: Arc::new(state),
                     py_zf_types: Arc::new(py_zf_types),
                 }))
@@ -134,14 +134,19 @@ impl Node for PySource {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let current_state = state.try_get::<PythonState>()?;
-        let src_class = current_state.module.as_ref().clone();
 
-        src_class
-            .call_method1(
-                py,
-                "finalize",
-                (src_class.clone(), current_state.py_state.as_ref().clone()),
-            )
+        let py_src = current_state
+            .module
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        let py_state = current_state
+            .py_state
+            .cast_as::<PyAny>(py)
+            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        py_src
+            .call_method1("finalize", (py_src, py_state))
             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
         Ok(())
@@ -154,7 +159,7 @@ zenoh_flow::export_source!(register);
 fn load_self() -> ZFResult<Library> {
     log::trace!("Python Source Wrapper loading Python {}", PY_LIB);
 
-    // Very dirty hack!
+    // Very dirty hack! We explicit load the python library!
     let lib_name = libloading::library_filename(PY_LIB);
     unsafe {
         #[cfg(target_family = "unix")]
