@@ -12,7 +12,7 @@
 ##   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 ##
 
-from zenoh_flow.interfaces.Sink import Sink
+from zenoh_flow.interfaces import Sink
 
 
 class MySink(Sink):

@@ -12,7 +12,7 @@
 ##   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 ##
 
-from zenoh_flow.interfaces.Operator import Operator
+from zenoh_flow.interfaces import Operator
 
 class MyState:
     def __init__(self):

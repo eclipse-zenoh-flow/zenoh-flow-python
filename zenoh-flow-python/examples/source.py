@@ -12,7 +12,7 @@
 ##   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 ##
 
-from zenoh_flow.interface.Source import Source
+from zenoh_flow.interface import Source
 import time
 
 class MyState:

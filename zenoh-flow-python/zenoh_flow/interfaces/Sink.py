@@ -13,13 +13,13 @@
 #
 
 
-
+from zenoh_flow.types import Context
 class Sink(object):
     '''
         The class representing a Zenoh Flow sink
     '''
 
-    def run(self, context, state, input: bytes) -> None:
+    def run(self, context: Context, state, input: bytes) -> None:
         '''
             The run method is called by the Zenoh Flow runtime.
             Any sink has to implement this method.
@@ -32,9 +32,9 @@ class Sink(object):
             :param input: The data message.
             :type input: :class:`DataMessage`
         '''
-        NotImplementedError("Please implement your own method, Sink is an interface")
+        raise NotImplementedError("Please implement your own method, Sink is an interface")
 
-    def initialize(self, configuration):
+    def initialize(self, configuration: dict):
         '''
             The initialize method is called by the zenoh flow runtime.
             This method is called when starting the data flow graph.
@@ -48,7 +48,7 @@ class Sink(object):
 
             :rtype: any
         '''
-        NotImplementedError("Please implement your own method, Sink is an interface")
+        raise NotImplementedError("Please implement your own method, Sink is an interface")
 
     def finalize(self, state) -> None:
         '''
@@ -62,4 +62,4 @@ class Sink(object):
             :param state: Sink state
             :type state: any
         '''
-        NotImplementedError("Please implement your own method, Sink is an interface")
+        raise NotImplementedError("Please implement your own method, Sink is an interface")

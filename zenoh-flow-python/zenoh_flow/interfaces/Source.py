@@ -14,13 +14,13 @@
 
 
 
-
+from zenoh_flow.types import Context
 
 class Source(object):
     '''
         The class representing a Zenoh Flow source
     '''
-    def run(self, context, state) -> bytes:
+    def run(self, context: Context, state) -> bytes:
         '''
             The run method is called by the zenoh flow runtime.
             This method is expected to produce data whenever it is called.
@@ -28,9 +28,9 @@ class Source(object):
 
             :rtype: bytes
         '''
-        NotImplementedError("Please implement your own method, Source is an interface")
+        raise NotImplementedError("Please implement your own method, Source is an interface")
 
-    def initialize(self, configuration):
+    def initialize(self, configuration: dict):
         '''
             The initialize method is called by the zenoh flow runtime.
             This method is called when starting the data flow graph.
@@ -44,7 +44,7 @@ class Source(object):
 
             :rtype: any
         '''
-        NotImplementedError("Please implement your own method, Source is an interface")
+        raise NotImplementedError("Please implement your own method, Source is an interface")
 
     def finalize(self, state) -> None:
         '''
@@ -58,4 +58,4 @@ class Source(object):
             :param state: Source state
             :type state: any
         '''
-        NotImplementedError("Please implement your own method, Source is an interface")
+        raise NotImplementedError("Please implement your own method, Source is an interface")

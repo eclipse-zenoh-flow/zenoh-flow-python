@@ -70,8 +70,6 @@ impl Operator for PyOperator {
         let py_ctx = from_context_to_pyany(ctx, &py, zf_types_module)?;
         let py_tokens = from_input_tokens_to_pydict(&mut real_tokens, &py, zf_types_module)?;
 
-        // let py_ctx = PyContext::from(ctx);
-        // let py_tokens = tokens_into_py(py, real_tokens);
 
         // Calling python code
         let ir_result: bool = op_class
@@ -88,21 +86,6 @@ impl Operator for PyOperator {
             .map_err(|e| from_pyerr_to_zferr(e, &py))?
             .extract(py)
             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-
-        // Getting back the tokens
-        // let py_tokens: HashMap<String, PyToken> = py_tokens
-        //     .extract(py)
-        //     .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-
-        // Converting the tokens to the rust type
-        // let new_tokens = {
-        //     let mut n_tokens = HashMap::new();
-        //     for (id, t) in py_tokens {
-        //         n_tokens.insert(id.into(), t.into());
-        //     }
-
-        //     n_tokens
-        // };
 
         // // Getting back the tokens and update tokens
         *tokens = from_pydict_to_input_tokens(py_tokens, &py)?;
@@ -133,8 +116,6 @@ impl Operator for PyOperator {
 
         let py_data = from_inputs_to_pydict(inputs, &py, zf_types_module)?;
 
-        // let py_ctx = PyContext::from(ctx);
-        // let py_data = PyInputs::try_from(inputs)?;
 
         // Call python copde
         let py_values = op_class
@@ -151,10 +132,10 @@ impl Operator for PyOperator {
             .map_err(|e| from_pyerr_to_zferr(e, &py))?
             .into_ref(py);
 
+            // Converting the results
         from_pyany_to_run_result(py_values, &py)
 
-        // Converting the results
-        // outputs_from_py(py, py_values)?.try_into()
+
     }
 
     fn output_rule(
@@ -180,33 +161,35 @@ impl Operator for PyOperator {
         let py_ctx = from_context_to_pyany(ctx, &py, zf_types_module)?;
         let py_data = from_outputs_to_pydict(&mut outputs, &py)?;
 
-        // let py_ctx = PyContext::from(ctx);
-        // let py_data = PyOutputs::try_from(outputs)?;
-        let deadline_miss = match deadlinemiss {
-            Some(deadlinemiss) => Some(from_local_deadline_miss_to_pyany(
-                &deadlinemiss,
-                &py,
-                zf_types_module,
-            )?),
-            None => None,
+        let py_values = match deadlinemiss {
+            Some(deadlinemiss) => op_class
+                .call_method1(
+                    py,
+                    "output_rule",
+                    (
+                        op_class.clone(),
+                        py_ctx,
+                        current_state.py_state.as_ref().clone(),
+                        py_data,
+                        from_local_deadline_miss_to_pyany(&deadlinemiss, &py, zf_types_module)?,
+                    ),
+                )
+                .map_err(|e| from_pyerr_to_zferr(e, &py))?
+                .into_ref(py),
+            None => op_class
+                .call_method1(
+                    py,
+                    "output_rule",
+                    (
+                        op_class.clone(),
+                        py_ctx,
+                        current_state.py_state.as_ref().clone(),
+                        py_data,
+                    ),
+                )
+                .map_err(|e| from_pyerr_to_zferr(e, &py))?
+                .into_ref(py),
         };
-        //PyLocalDeadlineMiss::from(deadlinemiss);
-
-        // Calling pthon code
-        let py_values = op_class
-            .call_method1(
-                py,
-                "output_rule",
-                (
-                    op_class.clone(),
-                    py_ctx,
-                    current_state.py_state.as_ref().clone(),
-                    py_data,
-                    deadline_miss,
-                ),
-            )
-            .map_err(|e| from_pyerr_to_zferr(e, &py))?
-            .into_ref(py);
 
         // Converting the results
         from_pyany_to_or_result(py_values, &py)
@@ -246,8 +229,6 @@ impl Node for PyOperator {
                 let module =
                     PyModule::from_code(py, &code, &script_file_path.to_string_lossy(), "op")
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-
-                // .map_err(|e| ZFError::InvalidData(e.to_string()))?;
 
                 // Getting the correct python module
                 let op_class: PyObject = module

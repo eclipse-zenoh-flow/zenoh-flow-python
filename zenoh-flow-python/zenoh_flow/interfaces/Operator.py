@@ -12,11 +12,13 @@
 #   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 #
 
+from zenoh_flow.types import Context, InputToken, LocalDeadlineMiss, DataMessage
+from typing import Dict, Optional
 
 class Operator(object):
 
-    def input_rule(self, context, state, tokens) -> bool:
-        '''
+    def input_rule(self, context: Context, state, tokens: Dict[str, InputToken]) -> bool:
+        """
             The input_rule method is called by the zenoh flow runtime.
             This method is called when data is received on one or more inputs.
             This result of this method is used as discriminant to trigger the
@@ -31,12 +33,12 @@ class Operator(object):
             :type tokens: dict{str,:class:`InputToken`}
 
             :rtype: bool
-        '''
+        """
 
-        NotImplementedError("Please implement your own method, Operator is an interface")
+        raise NotImplementedError("Please implement your own method, Operator is an interface")
 
-    def output_rule(self, context, state, outputs, deadline_miss):
-        '''
+    def output_rule(self, context: Context, state, outputs : Dict[str, bytes] , deadline_miss: Optional[LocalDeadlineMiss] = None) -> Dict[str, bytes]:
+        """
             The output_rule method is called by the zenoh flow runtime.
             This method is called when data is produced from the run.
             Any operator has to implement this method.
@@ -51,11 +53,11 @@ class Operator(object):
             :type deadline_miss: :class:`LocalDeadlineMiss`
 
             :rtype: :class:`Outputs`
-        '''
-        NotImplementedError("Please implement your own method, Operator is an interface")
+        """
+        raise NotImplementedError("Please implement your own method, Operator is an interface")
 
-    def run(self, context, state, inputs) -> bytes:
-        '''
+    def run(self, context: Context, state, inputs: Dict[str, DataMessage]) -> Dict[str, bytes]:
+        """
             The run method is called by the zenoh flow runtime.
             This method is called when the result of input_rule is true.
             This result of this method is used as the `outputs` parameter for the
@@ -70,11 +72,11 @@ class Operator(object):
             :type inputs: :class:`Inputs`
 
             :rtype: dict{str, bytes}
-        '''
-        NotImplementedError("Please implement your own method, Operator is an interface")
+        """
+        raise NotImplementedError("Please implement your own method, Operator is an interface")
 
-    def initialize(self, configuration):
-        '''
+    def initialize(self, configuration: dict):
+        """
             The initialize method is called by the zenoh flow runtime.
             This method is called when starting the data flow graph.
             Any operator has to implement this method.
@@ -86,11 +88,11 @@ class Operator(object):
             :type configuraion: dict
 
             :rtype: any
-        '''
-        NotImplementedError("Please implement your own method, Operator is an interface")
+        """
+        raise NotImplementedError("Please implement your own method, Operator is an interface")
 
     def finalize(self, state) -> None:
-        '''
+        """
             The finalize method is called by the zenoh flow runtime.
             This method is called when stopping the data flow graph.
             Any operator has to implement this method.
@@ -100,5 +102,5 @@ class Operator(object):
 
             :param state: Operator state
             :type state: any
-        '''
-        NotImplementedError("Please implement your own method, Operator is an interface")
+        """
+        raise NotImplementedError("Please implement your own method, Operator is an interface")
