@@ -15,7 +15,7 @@
 
 
 from zenoh_flow.types import Context
-from typing import Any
+from typing import Any, Dict
 
 class Source(object):
     '''
@@ -31,7 +31,7 @@ class Source(object):
         '''
         raise NotImplementedError("Please implement your own method, Source is an interface")
 
-    def initialize(self, configuration: dict) -> Any:
+    def initialize(self, configuration: Dict[str, Any]) -> Any:
         '''
             The initialize method is called by the zenoh flow runtime.
             This method is called when starting the data flow graph.

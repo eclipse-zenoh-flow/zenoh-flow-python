@@ -13,8 +13,8 @@
 #
 
 
-from zenoh_flow.types import Context
-from typing import Any
+from zenoh_flow.types import Context, DataMessage
+from typing import Any, Dict
 
 
 class Sink(object):
@@ -22,7 +22,7 @@ class Sink(object):
         The class representing a Zenoh Flow sink
     '''
 
-    def run(self, context: Context, state : Any, input: bytes) -> None:
+    def run(self, context: Context, state : Any, input: DataMessage) -> None:
         '''
             The run method is called by the Zenoh Flow runtime.
             Any sink has to implement this method.
@@ -37,7 +37,7 @@ class Sink(object):
         '''
         raise NotImplementedError("Please implement your own method, Sink is an interface")
 
-    def initialize(self, configuration: dict) -> Any:
+    def initialize(self, configuration: Dict[str, Any]) -> Any:
         '''
             The initialize method is called by the zenoh flow runtime.
             This method is called when starting the data flow graph.
@@ -47,7 +47,7 @@ class Sink(object):
             It should then return the state to the runtime.
 
             :param configuration: Configuration
-            :type configuraion: dict
+            :type configuration: dict
 
             :rtype: any
         '''

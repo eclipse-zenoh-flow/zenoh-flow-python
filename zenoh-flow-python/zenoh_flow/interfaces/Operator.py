@@ -75,7 +75,7 @@ class Operator(object):
         """
         raise NotImplementedError("Please implement your own method, Operator is an interface")
 
-    def initialize(self, configuration: dict) -> Any:
+    def initialize(self, configuration: Dict[str, Any]) -> Any:
         """
             The initialize method is called by the zenoh flow runtime.
             This method is called when starting the data flow graph.
