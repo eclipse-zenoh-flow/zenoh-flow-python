@@ -16,3 +16,4 @@
 from zenoh_flow.interfaces.operator import Operator
 from zenoh_flow.interfaces.sink import Sink
 from zenoh_flow.interfaces.source import Source
+from zenoh_flow.interfaces.controller import Controller

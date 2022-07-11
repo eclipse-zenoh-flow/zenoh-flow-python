@@ -13,41 +13,32 @@
 #
 
 
-
+from zenoh_flow import Sender
 from zenoh_flow.types import Context
-from typing import Any, Dict
+from typing import Any, Dict, Callable
 
 class Source(object):
     '''
         The class representing a Zenoh Flow source
     '''
-    def run(self, context: Context, state: Any) -> bytes:
+    def setup(self, configuration: Dict[str, Any], context: Context, outputs: Dict[str, Sender]) -> Callable[..., ...]:
         '''
-            The run method is called by the zenoh flow runtime.
-            This method is expected to produce data whenever it is called.
+            The setup method is called by the zenoh flow runtime.
+            This method is expected to return a function that iterates over the outputs producing data.
             Any source has to implement this method.
-
-            :rtype: bytes
-        '''
-        raise NotImplementedError("Please implement your own method, Source is an interface")
-
-    def initialize(self, configuration: Dict[str, Any]) -> Any:
-        '''
-            The initialize method is called by the zenoh flow runtime.
-            This method is called when starting the data flow graph.
-            Any source has to implement this method.
-            This method is use to initialize any state that can be useful
-            for the source (e.g. open files)
-            It should then return the state to the runtime.
 
             :param configuration: Configuration
-            :type configuraion: dict
+            :type configuration: dict
+            :param context: The Zenoh Flow context
+            :type context: :class:`Context`
+            :param outputs: The output streams
+            :type outputs: :class:`Dict[str, Sender]`
 
-            :rtype: any
+            :rtype: Callable[..., ...]
         '''
         raise NotImplementedError("Please implement your own method, Source is an interface")
 
-    def finalize(self, state: Any) -> None:
+    def finalize(self) -> None:
         '''
             The finalize method is called by the zenoh flow runtime.
             This method is called when stopping the data flow graph.
@@ -55,8 +46,5 @@ class Source(object):
             This method is use to finalize any state that can be useful
             for the source (e.g. close files)
             It should destroy the state.
-
-            :param state: Source state
-            :type state: any
         '''
         raise NotImplementedError("Please implement your own method, Source is an interface")

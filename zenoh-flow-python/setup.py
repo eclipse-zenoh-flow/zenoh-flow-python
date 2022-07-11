@@ -22,7 +22,7 @@ def readme():
 
 setup(
     name="eclipse-zenoh-flow",
-    version="0.2.0",
+    version="0.4.0",
     description="The python API for Eclipse zenoh flow",
     long_description=readme(),
     long_description_content_type='text/markdown',
@@ -44,6 +44,7 @@ setup(
         "Operating System :: Microsoft :: Windows",
     ],
     keywords="Networks network",
+    install_requires=["queue"],
     url="https://github.com/atolab/zenoh-flow-python",
     project_urls={
         "Bug Tracker": "https://github.com/eclipse-zenoh/zenoh-flow/issues",
