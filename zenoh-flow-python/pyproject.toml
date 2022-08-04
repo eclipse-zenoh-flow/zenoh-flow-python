@@ -1,4 +1,5 @@
 #
+#
 # Copyright (c) 2022 ZettaScale Technology
 #
 # This program and the accompanying materials are made available under the
@@ -11,25 +12,19 @@
 # Contributors:
 #   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 #
+#
 
-from setuptools import find_packages, setup
+[build-system]
+requires = ["maturin>=0.12,<0.13"]
+build-backend = "maturin"
 
-
-def readme():
-    with open('README.md') as f:
-        return f.read()
-
-
-setup(
-    name="eclipse-zenoh-flow",
-    version="0.4.0",
-    description="The python API for Eclipse zenoh flow",
-    long_description=readme(),
-    long_description_content_type='text/markdown',
-    author="ZettaScale Zenoh Team",
-    author_email="zenoh@zettascale.tech",
-    license="EPL-2.0 OR Apache-2.0",
-    classifiers=[
+[project]
+name = "eclipse-zenoh-flow"
+description = "The python API for Eclipse Zenoh Flow"
+requires-python = ">=3.7"
+author = "ZettaScale Zenoh team"
+author_email = "zenoh@zettascale.tech"
+classifiers = [
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
@@ -42,16 +37,11 @@ setup(
         "Operating System :: POSIX :: Linux",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: Microsoft :: Windows",
-    ],
-    keywords="Networks network",
-    install_requires=["queue"],
-    url="https://github.com/atolab/zenoh-flow-python",
-    project_urls={
-        "Bug Tracker": "https://github.com/eclipse-zenoh/zenoh-flow/issues",
-        "Source Code": "https://github.com/eclipse-zenoh/zenoh-flow",
-    },
-    # packages=find_packages(),
-    packages=["zenoh_flow", "zenoh_flow.interfaces", "zenoh_flow.types"],
-    zip_safe=False,
-    python_requires=">=3.7",
-)
+]
+zip_safe = false
+version = "0.4.0"
+
+[project.urls]
+"Bug Tracker" = "https://github.com/eclipse-zenoh/zenoh-flow/issues"
+"Source Code" = "https://github.com/eclipse-zenoh/zenoh-flow"
+"Documentation" = "https://readthedocs.org/projects/zenoh-flow/"

@@ -11,17 +11,20 @@
 // Contributors:
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
+#![feature(async_closure)]
 
 use async_trait::async_trait;
+use pyo3::types::{PyDict, PyList, PyString};
 use pyo3::{prelude::*, types::PyModule};
+use pyo3_asyncio::TaskLocals;
 use std::fs;
 use std::path::Path;
 use zenoh_flow::async_std::sync::Arc;
-use zenoh_flow::Configuration;
-use zenoh_flow::{Data, Node, Source, State, ZFError, ZFResult};
-use zenoh_flow_python_common::PythonState;
-use zenoh_flow_python_common::{configuration_into_py, from_context_to_pyany};
-use zenoh_flow_python_common::{from_pyany_to_data, from_pyerr_to_zferr};
+use zenoh_flow::{AsyncIteration, Configuration, Outputs};
+use zenoh_flow::{Data, Node, Source, ZFError, ZFResult};
+use zenoh_flow_python_common::from_pyerr_to_zferr;
+use zenoh_flow_python_common::{configuration_into_py, from_pyerr_to_zferr_no_trace};
+use zenoh_flow_python_common::{DataSender, PythonState};
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -39,117 +42,137 @@ struct PySource(Library);
 
 #[async_trait]
 impl Source for PySource {
-    async fn run(&self, ctx: &mut zenoh_flow::Context, state: &mut State) -> ZFResult<Data> {
+    async fn setup(
+        &self,
+        configuration: &Option<Configuration>,
+        outputs: Outputs,
+    ) -> ZFResult<Arc<dyn AsyncIteration>> {
         // Preparing python
-        let gil = Python::acquire_gil();
-        let py = gil.python();
+        pyo3::prepare_freethreaded_python();
 
-        // Preparing parameter
-        let current_state = state.try_get::<PythonState>()?;
+        // Configuring wrapper + python source
+        let my_state = Python::with_gil(|py| {
+            match configuration {
+                Some(configuration) => {
+                    // Unwrapping configuration
+                    let script_file_path = Path::new(
+                        configuration["python-script"]
+                            .as_str()
+                            .ok_or(ZFError::InvalidState)?,
+                    );
+                    let mut config = configuration.clone();
 
-        let py_src = current_state
-            .module
-            .cast_as::<PyAny>(py)
-            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+                    config["python-script"].take();
+                    let py_config = config["configuration"].take();
 
-        let py_state = current_state
-            .py_state
-            .cast_as::<PyAny>(py)
-            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+                    // Convert configuration to Python
+                    let py_config = configuration_into_py(py, py_config)
+                        .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-        let zf_types_module = current_state
-            .py_zf_types
-            .cast_as::<PyModule>(py)
-            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+                    let py_zf_types = PyModule::import(py, "zenoh_flow.types")
+                        .map_err(|e| from_pyerr_to_zferr(e, &py))?
+                        .to_object(py);
 
-        let py_ctx = from_context_to_pyany(ctx, &py, zf_types_module)?;
+                    // Load Python code
+                    let code = read_file(script_file_path).unwrap(); //?;
+                    let module = PyModule::from_code(
+                        py,
+                        &code,
+                        &script_file_path.to_string_lossy(),
+                        "source",
+                    )
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-        // Calling python
-        let py_value = py_src
-            .call_method1("run", (py_src, py_ctx, py_state))
-            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+                    // Getting the correct python module
+                    let source_class = module
+                        .call_method0("register")
+                        .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-        // Converting to rust types
-        from_pyany_to_data(py_value, &py)
+                    let py_senders = PyDict::new(py);
+
+                    for (id, output) in outputs.into_iter() {
+                        let pyo3_tx = DataSender::from(output);
+                        py_senders
+                            .set_item(PyString::new(py, &*id), &pyo3_tx.into_py(py))
+                            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+                    }
+
+                    // Setting asyncio event loop
+                    let asyncio = py.import("asyncio").unwrap();
+
+                    let event_loop = asyncio.call_method0("new_event_loop").unwrap();
+                    asyncio
+                        .call_method1("set_event_loop", (event_loop,))
+                        .unwrap();
+                    let event_loop_hdl = Arc::new(PyObject::from(event_loop));
+
+                    // setup the python source
+                    let lambda: PyObject = source_class
+                        .call_method1("setup", (source_class, py_config, py_senders))
+                        .map_err(|e| from_pyerr_to_zferr(e, &py))?
+                        .into();
+
+                    Ok(PythonState {
+                        module: Arc::new(source_class.into()),
+                        py_state: Arc::new(lambda),
+                        py_zf_types: event_loop_hdl,
+                    })
+                }
+                None => Err(ZFError::InvalidState),
+            }
+        })?;
+
+        Ok(Arc::new(async move || {
+            let future = Python::with_gil(|py| {
+                let asyncio = py.import("asyncio")?;
+
+                let py_state = my_state.py_state.cast_as::<PyAny>(py)?;
+
+                let event_loop = my_state.py_zf_types.cast_as::<PyAny>(py)?;
+
+                let task_locals = TaskLocals::new(event_loop);
+
+                let coroutine = py_state.call0()?.clone();
+                let py_future = event_loop.call_method1("run_until_complete", (coroutine,))?;
+                // let py_future = py_state.call0()?.clone();
+
+                pyo3_asyncio::into_future_with_locals(&task_locals, py_future)
+                // pyo3_asyncio::async_std::into_future(py_future)
+            })
+            .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
+
+            future
+                .await
+                .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
+            println!("[SRC] PyFuture done!");
+            Ok(())
+        }))
     }
 }
 
+#[async_trait]
 impl Node for PySource {
-    fn initialize(&self, configuration: &Option<Configuration>) -> ZFResult<State> {
-        // Preparing python
-        pyo3::prepare_freethreaded_python();
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        // Configuring wrapper + python source
-        match configuration {
-            Some(configuration) => {
-                // Unwrapping configuration
-                let script_file_path = Path::new(
-                    configuration["python-script"]
-                        .as_str()
-                        .ok_or(ZFError::InvalidState)?,
-                );
-                let mut config = configuration.clone();
-
-                config["python-script"].take();
-                let py_config = config["configuration"].take();
-
-                // Convert configuration to Python
-                let py_config = configuration_into_py(py, py_config)
-                    .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-
-                let py_zf_types = PyModule::import(py, "zenoh_flow.types")
-                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                    .to_object(py);
-
-                // Load Python code
-                let code = read_file(script_file_path)?;
-                let module =
-                    PyModule::from_code(py, &code, &script_file_path.to_string_lossy(), "source")
-                        .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-
-                // Getting the correct python module
-                let source_class = module
-                    .call_method0("register")
-                    .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-
-                // Initialize python state
-                let state: PyObject = source_class
-                    .call_method1("initialize", (source_class, py_config))
-                    .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                    .into();
-
-                Ok(State::from(PythonState {
-                    module: Arc::new(source_class.into()),
-                    py_state: Arc::new(state),
-                    py_zf_types: Arc::new(py_zf_types),
-                }))
-            }
-            None => Err(ZFError::InvalidState),
-        }
-    }
-
-    fn finalize(&self, state: &mut State) -> ZFResult<()> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        let current_state = state.try_get::<PythonState>()?;
-
-        let py_src = current_state
-            .module
-            .cast_as::<PyAny>(py)
-            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
-
-        let py_state = current_state
-            .py_state
-            .cast_as::<PyAny>(py)
-            .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
-
-        py_src
-            .call_method1("finalize", (py_src, py_state))
-            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-
+    async fn finalize(&self) -> ZFResult<()> {
         Ok(())
+        // let gil = Python::acquire_gil();
+        // let py = gil.python();
+        // let current_state = state.try_get::<PythonState>()?;
+
+        // let py_src = current_state
+        //     .module
+        //     .cast_as::<PyAny>(py)
+        //     .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        // let py_state = current_state
+        //     .py_state
+        //     .cast_as::<PyAny>(py)
+        //     .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
+
+        // py_src
+        //     .call_method1("finalize", (py_src, py_state))
+        //     .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+
+        // Ok(())
     }
 }
 

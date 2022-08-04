@@ -12,9 +12,8 @@
 #   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 #
 
-from zenoh_flow import Receiver
-from zenoh_flow.types import Context, DataMessage
-from typing import Any, Dict
+from zenoh_flow import DataReceiver
+from typing import Dict, Any, Callable
 
 
 class Sink(object):
@@ -22,7 +21,7 @@ class Sink(object):
         The class representing a Zenoh Flow sink
     '''
 
-    def run(self, configuration: Dict[str, Any], context: Context, inputs: Dict[str, Receiver]) -> Callable[..., ...]:
+    def setup(self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver]) -> Callable[[], Any]:
         '''
             The run method is called by the Zenoh Flow runtime.
             Any sink has to implement this method.
@@ -31,12 +30,10 @@ class Sink(object):
 
             :param configuration: Configuration
             :type configuration: dict
-            :param context: The Zenoh Flow context
-            :type context: :class:`Context`
             :param inputs: The input streams
             :type inputs: :class:`Dict[str, Receiver]`
 
-            :rtype: Callable[..., ...]
+            :rtype: Callable[[], Any]
         '''
         raise NotImplementedError("Please implement your own method, Sink is an interface")
 

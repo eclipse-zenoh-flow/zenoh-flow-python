@@ -12,31 +12,48 @@
 #   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 #
 
-from zenoh_flow.interface import Source
+from zenoh_flow.interfaces import Source
+from zenoh_flow import DataSender
+from typing import Any, Dict, Callable
 import time
+import asyncio
 
 class MyState:
     def __init__(self, configuration):
         self.value = 0
-        if configuration['value'] is not None:
+        if configuration is not None and configuration['value'] is not None:
             self.value = int(configuration['value'])
 
 class MySrc(Source):
-    def initialize(self, configuration):
-        return MyState(configuration)
 
-    def finalize(self, state):
+    def setup(self, configuration: Dict[str, Any], outputs: Dict[str, DataSender]) -> Callable[[], Any]:
+        state = MyState(configuration)
+        output = outputs.get('Value', None)
+        return lambda: create_data(output, state)
+
+    def finalize(self) -> None:
         return None
 
-    def run(self, _ctx, state):
-        state.value += 1
-        time.sleep(1)
-        return int_to_bytes(state.value)
 
+async def create_data(output, state):
+    await asyncio.sleep(0.5)
+    state.value += 1
+    print(f"Sending {state.value}")
+    await output.send(int_to_bytes(state.value))
+    return None
 
 
 def int_to_bytes(x: int) -> bytes:
     return x.to_bytes((x.bit_length() + 7) // 8, 'big')
 
 def register():
+    # import asyncio
+    # import threading
+    # loop = asyncio.new_event_loop()
+    # asyncio.set_event_loop(loop)
+
+    # def run_loop(loop):
+    #     loop.run_forever()
+    # threading.Thread(target=run_loop, args=(loop,)).start()
+
     return MySrc

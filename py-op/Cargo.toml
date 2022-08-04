@@ -29,9 +29,11 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-zenoh-flow = { git = "https://github.com/eclipse-zenoh/zenoh-flow.git", branch = "master"}
+async-trait = "0.1"
+zenoh-flow = { git = "https://github.com/ZettaScaleLabs/zenoh-flow.git", branch = "dev/v0.4.0"}
 zenoh-flow-python-common = {path = "../zenoh-flow-python-common/"}
 pyo3 = "0.16"
+pyo3-asyncio = { version = "0.16", features = ["attributes", "async-std-runtime"] }
 log = "0.4"
 libloading = "0.7"
 

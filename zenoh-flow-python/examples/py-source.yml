@@ -1,0 +1,6 @@
+id: PySource
+uri: file://./zenoh-flow-python/examples/source.py
+output:
+  id: Value
+  type: usize
+tags: []

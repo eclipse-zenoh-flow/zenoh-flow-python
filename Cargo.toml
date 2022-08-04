@@ -16,6 +16,7 @@
 
 members = [
   "zenoh-flow-python-common",
+  "zenoh-flow-python",
   "py-source",
   "py-sink",
   "py-op",

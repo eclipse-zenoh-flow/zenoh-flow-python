@@ -160,61 +160,64 @@ Operator:
 
 '''
 
+
+from .zenoh_flow import DataSender, DataReceiver, DataMessage
+
 from queue import Queue
 from zenoh_flow import interfaces
 from zenoh_flow import types
 
 
-class Receiver(object):
-    def __init__(self, queue, is_cb=False, cb=None):
-        self.__queue = queue
-        self.__is_cb = is_cb
-        self.__cb = cb
+# class Receiver(object):
+#     def __init__(self, queue, is_cb=False, cb=None):
+#         self.__queue = queue
+#         self.__is_cb = is_cb
+#         self.__cb = cb
 
-    def recv(self):
-        if not self.__is_cb:
-            return self.__queue.get()
-        return None
+#     def recv(self):
+#         if not self.__is_cb:
+#             return self.__queue.get()
+#         return None
 
-    def into_callback(self, cb):
-        self.__cb = cb
-        self.__is_cb = True
+#     def into_callback(self, cb):
+#         self.__cb = cb
+#         self.__is_cb = True
 
-    def call(self, data):
-        if self.__is_cb:
-            return self.__cb(data)
-        return None
+#     def call(self, data):
+#         if self.__is_cb:
+#             return self.__cb(data)
+#         return None
 
-class Sender(object):
-    def __init__(self, queue, rx = None, is_cb=False, cb = None):
-        self.__queue = queue
-        self.__rx = rx
-        self.__is_cb = is_cb
-        self.__cb = cb
+# class Sender(object):
+#     def __init__(self, queue, rx = None, is_cb=False, cb = None):
+#         self.__queue = queue
+#         self.__rx = rx
+#         self.__is_cb = is_cb
+#         self.__cb = cb
 
-    def send(self, value):
-        self.__queue.put(value)
+#     def send(self, value):
+#         self.__queue.put(value)
 
-    def call_rx(self, data):
-        return self.__rx.call(data)
+#     def call_rx(self, data):
+#         return self.__rx.call(data)
 
-    def into_callback(self, cb):
-        self.__is_cb = True
-        self.__cb = cb
+#     def into_callback(self, cb):
+#         self.__is_cb = True
+#         self.__cb = cb
 
-    def call_tx(self):
-        if self.__is_cb:
-            return self.__cb()
-        return None
-
-
-class Channel(object):
-    @classmethod
-    def new(cls, size = 0):
-        queue = Queue(size)
-
-        rx = Receiver(queue)
-        tx = Sender(queue, rx)
+#     def call_tx(self):
+#         if self.__is_cb:
+#             return self.__cb()
+#         return None
 
 
-        return (tx, rx)
+# class Channel(object):
+#     @classmethod
+#     def new(cls, size = 0):
+#         queue = Queue(size)
+
+#         rx = Receiver(queue)
+#         tx = Sender(queue, rx)
+
+
+#         return (tx, rx)

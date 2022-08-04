@@ -1,0 +1,9 @@
+id: PyOperator
+uri: file://./zenoh-flow-python/examples/operator.py
+inputs:
+  - id: Data
+    type: usize
+outputs:
+  - id: Data
+    type: usize
+tags: []

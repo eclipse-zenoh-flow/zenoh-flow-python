@@ -13,8 +13,7 @@
 #
 
 
-from zenoh_flow import Sender, Receiver
-from zenoh_flow.types import Context
+from zenoh_flow import DataReceiver, DataSender
 from typing import Any, Dict, Callable
 
 class Controller(object):
@@ -22,7 +21,7 @@ class Controller(object):
         The class representing a Zenoh Flow controller, a controller is
         something acting as source and sink at the same time. Eg. a device driver.
     '''
-    def setup(self, configuration: Dict[str, Any], context: Context, inputs: Dict[str, Receiver], outputs: Dict[str, Sender]) -> Callable[..., ...]:
+    def setup(self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver], outputs: Dict[str, DataSender]) -> Callable[[], Any]:
         '''
             The setup method is called by the zenoh flow runtime.
             This method is expected to return a function that iterates over
@@ -31,14 +30,12 @@ class Controller(object):
 
             :param configuration: Configuration
             :type configuration: dict
-            :param context: The Zenoh Flow context
-            :type context: :class:`Context`
             :param inputs: The input streams
             :type inputs: :class:`Dict[str, Receiver]`
             :param outputs: The output streams
             :type outputs: :class:`Dict[str, Sender]`
 
-            :rtype: Callable[..., ...]
+            :rtype: Callable[[], Any]
         '''
         raise NotImplementedError("Please implement your own method, Controller is an interface")
 

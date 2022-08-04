@@ -13,55 +13,23 @@
 #
 
 from zenoh_flow.interfaces import Operator
-
-class MyState:
-    def __init__(self):
-        self.value = 0
-
-    def inc(self):
-        self.value += 1
-
-    def mod_2(self):
-        return (self.value % 2)
-
-    def mod_3(self):
-        return (self.value % 3)
+from zenoh_flow import DataReceiver, DataSender
+from typing import Dict, Any, Callable
 
 class MyOp(Operator):
-    def initialize(self, configuration):
-        return MyState()
 
-    def finalize(self, state):
+    def setup(self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver], outputs: Dict[str, DataSender]) -> Callable[[], Any]:
+        output = outputs.get('Data', None)
+        in_stream = inputs.get('Data', None)
+        return lambda: run(in_stream, output)
+
+    def finalize(self):
         return None
 
-    def input_rule(self, _ctx, state, tokens):
-        # Using input rules
-        state.inc()
-        token = tokens.get('Data')
-        if state.mod_2():
-            token.set_action_consume()
-            return True
-        elif state.mod_3():
-            token.set_action_keep()
-            return True
-        else:
-            token.set_action_drop()
-            return False
-
-    def output_rule(self, _ctx, _state, outputs, _deadline_miss = None):
-        return outputs
-
-    def run(self, _ctx, _state, inputs):
-        # Getting the inputs
-        data = inputs.get('Data').get_data()
-        # Computing over the inputs
-        int_data = int_from_bytes(data)
-        int_data = int_data * 2
-        # outputs = ()
-        # outputs.put('Data', int_to_bytes(int_data))
-        # Producing the outputs
-        outputs = {'Data' : int_to_bytes(int_data)}
-        return outputs
+async def run(in_stream, out_stream):
+    data_msg = await in_stream.recv()
+    await out_stream.send(data_msg.data)
+    return None
 
 
 
@@ -72,4 +40,13 @@ def int_from_bytes(xbytes: bytes) -> int:
     return int.from_bytes(xbytes, 'big')
 
 def register():
+    # import asyncio
+    # import threading
+    # loop = asyncio.new_event_loop()
+    # asyncio.set_event_loop(loop)
+
+    # def run_loop(loop):
+    #     loop.run_forever()
+    # threading.Thread(target=run_loop, args=(loop,)).start()
+
     return MyOp

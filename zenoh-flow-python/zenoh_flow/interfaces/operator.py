@@ -12,15 +12,14 @@
 #   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 #
 
-from zenoh_flow import Sender, Receiver
-from zenoh_flow.types import Context, InputToken, LocalDeadlineMiss, DataMessage
-from typing import Dict, Optional, Any
+from zenoh_flow import DataReceiver, DataSender
+from typing import Dict, Any, Callable
 
 class Operator(object):
     '''
         The class representing a Zenoh Flow operator
     '''
-    def setup(self, configuration: Dict[str, Any], context: Context, inputs: Dict[str, Receiver], outputs: Dict[str, Sender]) -> Callable[..., ...]:
+    def setup(self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver], outputs: Dict[str, DataSender]) -> Callable[[], Any]:
         """
             The run method is called by the zenoh flow runtime.
             This method is expected to return a function that iterates over the outputs producing data.
@@ -28,14 +27,12 @@ class Operator(object):
 
             :param configuration: Configuration
             :type configuration: dict
-            :param context: The Zenoh Flow context
-            :type context: :class:`Context`
             :param inputs: The input streams
             :type inputs: :class:`Dict[str, Receiver]`
             :param outputs: The output streams
             :type outputs: :class:`Dict[str, Sender]`
 
-            :rtype: Callable[..., ...]
+            :rtype: Callable[[], Any]
         """
         raise NotImplementedError("Please implement your own method, Operator is an interface")
 

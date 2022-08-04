@@ -21,10 +21,11 @@ edition = "2018"
 
 [dependencies]
 
-zenoh-flow = { git = "https://github.com/eclipse-zenoh/zenoh-flow.git", branch = "master"}
+zenoh-flow = { git = "https://github.com/ZettaScaleLabs/zenoh-flow.git", branch = "dev/v0.4.0"}
 async-trait = "0.1"
 zenoh-flow-python-common = {path = "../zenoh-flow-python-common/"}
 pyo3 = "0.16"
+pyo3-asyncio = { version = "0.16", features = ["attributes", "async-std-runtime"] }
 libloading = "0.7"
 log = "0.4"
 

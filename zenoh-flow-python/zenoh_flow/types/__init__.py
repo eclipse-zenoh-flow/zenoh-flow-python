@@ -16,30 +16,30 @@
 from enum import Enum
 from typing import Sequence, Optional
 
-class Context(object):
-    '''
-        A Zenoh Flow context.
-        Zenoh Flow context contains a `mode` that represent
-        the current execution mode for the operator.
-    '''
-    def __init__(self, mode: int):
-        self.mode = mode
+# class Context(object):
+#     '''
+#         A Zenoh Flow context.
+#         Zenoh Flow context contains a `mode` that represent
+#         the current execution mode for the operator.
+#     '''
+#     def __init__(self, mode: int):
+#         self.mode = mode
 
-    def get_mode(self) -> int:
-        '''
-            Gets the mode from the :class:`Context`
+#     def get_mode(self) -> int:
+#         '''
+#             Gets the mode from the :class:`Context`
 
-            :rtype: int
-        '''
-        return self.mode
+#             :rtype: int
+#         '''
+#         return self.mode
 
-    def set_mode(self, mode: int) -> None:
-        '''
-            Sets the mode for the :class:`Context`
+#     def set_mode(self, mode: int) -> None:
+#         '''
+#             Sets the mode for the :class:`Context`
 
-            :param mode the mode to be set
-        '''
-        self.mode = mode
+#             :param mode the mode to be set
+#         '''
+#         self.mode = mode
 
 
 class Timestamp(object):
@@ -50,33 +50,48 @@ class Timestamp(object):
         self.ntp = ntp
         self.id = id
 
-class DataMessage(object):
-    '''
-        A Zenoh Flow Data Message.
-        It contains:
-        `data` as array of bytes.
-        `ts` an uHLC timestamp associated with the data.
-        `missed_end_to_end_deadlines` list of `E2EDeadlineMiss`
-    '''
+# class DataMessage(object):
+#     '''
+#         A Zenoh Flow Data Message.
+#         It contains:
+#         `data` as array of bytes.
+#         `ts` an uHLC timestamp associated with the data.
+#     '''
 
-    def __init__(self, ts : Timestamp, data: bytes):
-        self.ts = ts
-        self.data = data
+#     def __init__(self, ts : Timestamp, data: bytes):
+#         self.ts = ts
+#         self.data = data
 
-    def get_data(self) -> bytes:
-        '''
-            Gets the data from the :class:`DataMessage`
+#     def get_data(self) -> bytes:
+#         '''
+#             Gets the data from the :class:`DataMessage`
 
-            :rtype: bytes
-        '''
-        return self.data
+#             :rtype: bytes
+#         '''
+#         return self.data
 
-    def get_timestamp(self) -> Timestamp:
-        '''
-            Gets the timestamp from the :class:`DataMessage`
+#     def get_timestamp(self) -> Timestamp:
+#         '''
+#             Gets the timestamp from the :class:`DataMessage`
 
-            :rtype: bytes
-        '''
-        return self.ts
+#             :rtype: bytes
+#         '''
+#         return self.ts
 
 
+# class Watermark(object):
+#     '''
+#         A Zenoh Flow Watermark Message.
+#         It contains:
+#         `ts` an uHLC timestamp watermaks.
+#     '''
+#     def __init__(self, ts : Timestamp):
+#         self.data = data
+
+#     def get_timestamp(self) -> Timestamp:
+#         '''
+#             Gets the timestamp from the :class:`Watermark`
+
+#             :rtype: bytes
+#         '''
+#         return self.ts

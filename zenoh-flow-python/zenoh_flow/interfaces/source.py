@@ -13,28 +13,25 @@
 #
 
 
-from zenoh_flow import Sender
-from zenoh_flow.types import Context
+from zenoh_flow import DataSender
 from typing import Any, Dict, Callable
 
 class Source(object):
     '''
         The class representing a Zenoh Flow source
     '''
-    def setup(self, configuration: Dict[str, Any], context: Context, outputs: Dict[str, Sender]) -> Callable[..., ...]:
+    def setup(self, configuration: Dict[str, Any], outputs: Dict[str, DataSender]) -> Callable[[], Any]:
         '''
             The setup method is called by the zenoh flow runtime.
             This method is expected to return a function that iterates over the outputs producing data.
             Any source has to implement this method.
 
             :param configuration: Configuration
-            :type configuration: dict
-            :param context: The Zenoh Flow context
-            :type context: :class:`Context`
+            :type configuration: dict`
             :param outputs: The output streams
             :type outputs: :class:`Dict[str, Sender]`
 
-            :rtype: Callable[..., ...]
+            :rtype: Callable[[], Any]
         '''
         raise NotImplementedError("Please implement your own method, Source is an interface")
 
