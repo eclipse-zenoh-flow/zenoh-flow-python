@@ -23,12 +23,10 @@ class MyState:
         self.value = 0
         if configuration is not None and configuration['value'] is not None:
             self.value = int(configuration['value'])
-        print(f"src config {configuration}")
 
 class MySrc(Source):
 
     def setup(self, configuration: Dict[str, Any], outputs: Dict[str, DataSender]) -> Callable[[], Any]:
-        print(f"src config (on setup) {configuration}")
         state = MyState(configuration)
         output = outputs.get('Value', None)
         return lambda: create_data(output, state)
