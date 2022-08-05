@@ -121,7 +121,7 @@ impl DataSender {
         let rust_data = Data::from_bytes(data.as_bytes().to_owned());
         pyo3_asyncio::async_std::future_into_py(py, async move {
             c_sender
-                .send(rust_data, ts)
+                .send_async(rust_data, ts)
                 .await
                 .map_err(|_| PyValueError::new_err("Unable to send data"))?;
             Ok(Python::with_gil(|py| py.None()))
@@ -151,7 +151,7 @@ impl DataReceiver {
         let c_receiver = self.receiver.clone();
         pyo3_asyncio::async_std::future_into_py(py, async move {
             let rust_msg = c_receiver
-                .recv()
+                .recv_async()
                 .await
                 .map_err(|_| PyValueError::new_err("Unable to receive data"))?;
             DataMessage::try_from(rust_msg)
