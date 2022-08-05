@@ -32,7 +32,8 @@ use zenoh_flow::zenoh_flow_derive::ZFState;
 pub struct PythonState {
     pub module: Arc<PyObject>,
     pub py_state: Arc<PyObject>,
-    pub py_zf_types: Arc<PyObject>,
+    pub event_loop: Arc<PyObject>,
+    pub asyncio_module: Arc<PyObject>,
 }
 unsafe impl Send for PythonState {}
 unsafe impl Sync for PythonState {}
@@ -474,7 +475,6 @@ pub struct DataMessage {
 
 #[pymethods]
 impl DataMessage {
-
     #[new]
     pub fn new(data: Py<PyBytes>, ts: Py<PyLong>, is_watermark: bool) -> Self {
         Self {

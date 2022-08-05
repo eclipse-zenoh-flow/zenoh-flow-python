@@ -68,10 +68,6 @@ impl Sink for PySink {
                     let py_config = configuration_into_py(py, py_config)
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    let py_zf_types = PyModule::import(py, "zenoh_flow.types")
-                        .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                        .to_object(py);
-
                     // Load Python code
                     let code = read_file(script_file_path)?;
                     let module =
@@ -110,7 +106,8 @@ impl Sink for PySink {
                     let py_state = PythonState {
                         module: Arc::new(sink_class.into()),
                         py_state: Arc::new(lambda),
-                        py_zf_types: event_loop_hdl,
+                        event_loop: event_loop_hdl,
+                        asyncio_module: Arc::new(PyObject::from(asyncio)),
                     };
 
                     Ok(py_state)
@@ -120,28 +117,19 @@ impl Sink for PySink {
         })?;
 
         Ok(Arc::new(async move || {
-            let future = Python::with_gil(|py| {
-                let asyncio = py.import("asyncio")?;
-
+            Python::with_gil(|py| {
                 let py_state = my_state.py_state.cast_as::<PyAny>(py)?;
 
-                let event_loop = my_state.py_zf_types.cast_as::<PyAny>(py)?;
+                let event_loop = my_state.event_loop.cast_as::<PyAny>(py)?;
 
                 let task_locals = TaskLocals::new(event_loop);
 
-                let coroutine = py_state.call0()?.clone();
-                let py_future = event_loop.call_method1("run_until_complete", (coroutine,))?;
-                // let py_future = py_state.call0()?.clone();
+                let py_future = py_state.call0()?.clone();
 
-                pyo3_asyncio::into_future_with_locals(&task_locals, py_future)
-                // pyo3_asyncio::async_std::into_future(py_future)
+                let fut = pyo3_asyncio::into_future_with_locals(&task_locals, py_future)?;
+                pyo3_asyncio::async_std::run_until_complete(event_loop, fut)
             })
             .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
-
-            future
-                .await
-                .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
-            println!("[SNK] PyFuture done!");
             Ok(())
         }))
     }
