@@ -19,12 +19,11 @@ use pyo3::{prelude::*, types::PyModule};
 use pyo3_asyncio::TaskLocals;
 use std::fs;
 use std::path::Path;
-use zenoh_flow::async_std::sync::Arc;
-use zenoh_flow::{AsyncIteration, Configuration, Inputs};
-use zenoh_flow::{DataMessage, Node, Sink, ZFError, ZFResult};
+use std::sync::Arc;
+use zenoh_flow::{AsyncIteration, Configuration, Inputs, Node, Sink, ZFError, ZFResult};
+use zenoh_flow_python_common::from_pyerr_to_zferr;
 use zenoh_flow_python_common::PythonState;
 use zenoh_flow_python_common::{configuration_into_py, DataReceiver};
-use zenoh_flow_python_common::{from_pyerr_to_zferr, from_pyerr_to_zferr_no_trace};
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -45,7 +44,7 @@ impl Sink for PySink {
     async fn setup(
         &self,
         configuration: &Option<Configuration>,
-        mut inputs: Inputs,
+        inputs: Inputs,
     ) -> ZFResult<Arc<dyn AsyncIteration>> {
         // prepare python
         pyo3::prepare_freethreaded_python();
@@ -84,7 +83,7 @@ impl Sink for PySink {
                     for (id, input) in inputs.into_iter() {
                         let pyo3_rx = DataReceiver::from(input);
                         py_receivers
-                            .set_item(PyString::new(py, &*id), &pyo3_rx.into_py(py))
+                            .set_item(PyString::new(py, &id), &pyo3_rx.into_py(py))
                             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
                     }
 
@@ -124,7 +123,7 @@ impl Sink for PySink {
 
                 let task_locals = TaskLocals::new(event_loop);
 
-                let py_future = py_state.call0()?.clone();
+                let py_future = <&pyo3::PyAny>::clone(&py_state.call0()?);
 
                 let fut = pyo3_asyncio::into_future_with_locals(&task_locals, py_future)?;
                 pyo3_asyncio::async_std::run_until_complete(event_loop, fut)

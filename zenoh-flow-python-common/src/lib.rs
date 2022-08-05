@@ -14,16 +14,10 @@
 
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyBool, PyBytes, PyDict, PyInt, PyList, PyLong, PyString};
-use std::collections::HashMap;
+use pyo3::types::{PyBytes, PyDict, PyList, PyLong};
 use std::convert::TryFrom;
-use std::time::Duration;
-use uhlc::{Timestamp, NTP64};
-use uuid::Uuid;
-use zenoh_flow::model::{InputDescriptor, OutputDescriptor};
-use zenoh_flow::runtime::message::DataMessage as ZFDataMessage;
-use zenoh_flow::types::{Data, NodeOutput};
-use zenoh_flow::{Context, Input, Message as ZFMessage, Output, PortId, ZFError, ZFResult};
+use zenoh_flow::types::Data;
+use zenoh_flow::{Input, Message as ZFMessage, Output, ZFError};
 
 use zenoh_flow::async_std::sync::Arc;
 use zenoh_flow::zenoh_flow_derive::ZFState;
@@ -46,10 +40,7 @@ impl std::fmt::Debug for PythonState {
 
 pub fn from_pyerr_to_zferr(py_err: pyo3::PyErr, py: &pyo3::Python<'_>) -> ZFError {
     let tb = if let Some(traceback) = py_err.traceback(*py) {
-        format!(
-            "{}",
-            traceback.format().map_or_else(|_| "".to_string(), |s| s)
-        )
+        traceback.format().map_or_else(|_| "".to_string(), |s| s)
     } else {
         "".to_string()
     };
@@ -57,292 +48,6 @@ pub fn from_pyerr_to_zferr(py_err: pyo3::PyErr, py: &pyo3::Python<'_>) -> ZFErro
     let err_str = format!("Error: {:?}\nTraceback: {:?}", py_err, tb);
     ZFError::InvalidData(err_str)
 }
-
-pub fn from_pyerr_to_zferr_no_trace(py_err: pyo3::PyErr) -> ZFError {
-    let err_str = format!("Error: {:?}\n", py_err);
-    ZFError::InvalidData(err_str)
-}
-
-/// Converts rust `Context` into a `PyAny` to be passed to Python.
-// pub fn from_context_to_pyany<'a>(
-//     ctx: &'_ Context,
-//     py: &'a Python,
-//     zf_types_module: &'a PyModule,
-// ) -> ZFResult<&'a PyAny> {
-//     zf_types_module
-//         .getattr("Context")
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .call1((ctx.mode,))
-//         .map_err(|e| from_pyerr_to_zferr(e, py))
-// }
-
-// /// Converts Python `PyAny` into a rust `Context`.
-// pub fn from_pyany_to_context<'a>(from: &'a PyAny, py: &'a Python) -> ZFResult<Context> {
-//     let mode: usize = from
-//         .call_method0("get_mode")
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .extract()
-//         .map_err(|e| from_pyerr_to_zferr(e.into(), py))?;
-
-//     Ok(Context { mode })
-// }
-
-// /// Converts rust `OutputDescriptor` into a `PyAny` to be passed to Python.
-// pub fn from_output_descriptor_to_pyany<'a>(
-//     from: &'_ OutputDescriptor,
-//     py: &'a Python,
-//     zf_types_module: &'a PyModule,
-// ) -> ZFResult<&'a PyAny> {
-//     zf_types_module
-//         .getattr("FromDescriptor")
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .call1((
-//             PyString::new(*py, &from.node),
-//             PyString::new(*py, &from.output),
-//         ))
-//         .map_err(|e| from_pyerr_to_zferr(e, py))
-// }
-// /// Converts Python `PyAny` into a rust `OutputDescriptor`.
-// pub fn from_pyany_to_output_descritptor<'a>(
-//     from: &'a PyAny,
-//     py: &'a Python,
-// ) -> ZFResult<OutputDescriptor> {
-//     let node = from
-//         .getattr("node")
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .cast_as::<PyString>()
-//         .map_err(|e| from_pyerr_to_zferr(e.into(), py))?
-//         .to_str()
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .to_string()
-//         .into();
-
-//     let output = from
-//         .getattr("output")
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .cast_as::<PyString>()
-//         .map_err(|e| from_pyerr_to_zferr(e.into(), py))?
-//         .to_str()
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .to_string()
-//         .into();
-
-//     Ok(OutputDescriptor { node, output })
-// }
-
-// /// Converts rust `InputDescriptor` into a `PyAny` to be passed to Python.
-// pub fn from_input_descriptor_to_pyany<'a>(
-//     from: &'_ InputDescriptor,
-//     py: &'a Python,
-//     zf_types_module: &'a PyModule,
-// ) -> ZFResult<&'a PyAny> {
-//     zf_types_module
-//         .getattr("FromDescriptor")
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .call1((
-//             PyString::new(*py, &from.node),
-//             PyString::new(*py, &from.input),
-//         ))
-//         .map_err(|e| from_pyerr_to_zferr(e, py))
-// }
-// /// Converts Python `PyAny` into a rust `InputDescriptor`.
-// pub fn from_pyany_to_input_descritptor<'a>(
-//     from: &'a PyAny,
-//     py: &'a Python,
-// ) -> ZFResult<InputDescriptor> {
-//     let node = from
-//         .getattr("node")
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .cast_as::<PyString>()
-//         .map_err(|e| from_pyerr_to_zferr(e.into(), py))?
-//         .to_str()
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .to_string()
-//         .into();
-
-//     let input = from
-//         .getattr("input")
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .cast_as::<PyString>()
-//         .map_err(|e| from_pyerr_to_zferr(e.into(), py))?
-//         .to_str()
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .to_string()
-//         .into();
-
-//     Ok(InputDescriptor { node, input })
-// }
-
-// /// Converts rust `Timestamp` into a `PyAny` to be passed to Python.
-// pub fn from_timestamp_to_pyany<'a>(
-//     from: &'_ Timestamp,
-//     py: &'a Python,
-//     zf_types_module: &'a PyModule,
-// ) -> ZFResult<&'a PyAny> {
-//     zf_types_module
-//         .getattr("Timestamp")
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .call1((
-//             from.get_time().as_u64(),
-//             PyString::new(*py, &from.get_id().to_string()),
-//         ))
-//         .map_err(|e| from_pyerr_to_zferr(e, py))
-// }
-
-// /// Converts Python `PyAny` into a rust `Timestamp`.
-// pub fn from_pyany_to_timestamp<'a>(from: &'a PyAny, py: &'a Python) -> ZFResult<Timestamp> {
-//     let ntp: u64 = from
-//         .getattr("ntp")
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .extract()
-//         .map_err(|e| from_pyerr_to_zferr(e.into(), py))?;
-
-//     let id = from
-//         .getattr("id")
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .cast_as::<PyString>()
-//         .map_err(|e| from_pyerr_to_zferr(e.into(), py))?
-//         .to_str()
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?;
-
-//     let id = Uuid::parse_str(id).map_err(|_| ZFError::DeseralizationError)?;
-//     Ok(Timestamp::new(NTP64(ntp), id.into()))
-// }
-
-// /// Converts rust `DataMessage` into a `PyAny` to be passed to Python.
-// pub fn from_data_message_to_pyany<'a>(
-//     from: &'_ mut DataMessage,
-//     py: &'a Python,
-//     zf_types_module: &'a PyModule,
-// ) -> ZFResult<&'a PyAny> {
-//     // let pye2e = PyList::empty(*py);
-
-//     // for e in from.get_missed_end_to_end_deadlines() {
-//     //     pye2e
-//     //         .append(from_e2e_deadline_miss_to_pyany(e, py, zf_types_module)?)
-//     //         .map_err(|e| from_pyerr_to_zferr(e, py))?;
-//     // }
-
-//     let py_it = zf_types_module
-//         .getattr("DataMessage")
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .call1((
-//             from_timestamp_to_pyany(from.get_timestamp(), py, zf_types_module)?,
-//             PyBytes::new(*py, &from.get_inner_data().try_as_bytes()?),
-//         ))
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?;
-
-//     Ok(py_it)
-// }
-
-// /// Converts Python `PyAny` into a rust `DataMessage`.
-// pub fn from_pyany_to_data_message<'a>(from: &'a PyAny, py: &'a Python) -> ZFResult<DataMessage> {
-//     let data = from
-//         .getattr("data")
-//         .map_err(|e| from_pyerr_to_zferr(e, py))?
-//         .cast_as::<PyBytes>()
-//         .map_err(|e| from_pyerr_to_zferr(e.into(), py))?
-//         .as_bytes()
-//         .to_vec();
-
-//     let ts = from_pyany_to_timestamp(
-//         from.getattr("data")
-//             .map_err(|e| from_pyerr_to_zferr(e, py))?,
-//         py,
-//     )?;
-
-//     // let mut e2ed = vec![];
-//     // let pye2ed = from.getattr("missed_end_to_end_deadlines")
-//     //     .map_err(|e| from_pyerr_to_zferr(e, py))?;
-
-//     // for e in pye2ed.iter() {
-//     //     e2ed.push(from_pyany_to_e2e_deadline_miss(e, py)?);
-//     // }
-
-//     Ok(DataMessage::new(Data::from_bytes(data), ts))
-// }
-
-// /// Converts rust `HashMap<PortId, DataMessage>` into a `PyDict` to be passed to Python.
-// pub fn from_inputs_to_pydict<'a>(
-//     from: &'_ mut HashMap<PortId, DataMessage>,
-//     py: &'a Python,
-//     zf_types_module: &'a PyModule,
-// ) -> ZFResult<&'a PyDict> {
-//     let pydict = PyDict::new(*py);
-
-//     for (k, v) in from {
-//         let data = from_data_message_to_pyany(v, py, zf_types_module)?;
-
-//         pydict
-//             .set_item(PyString::new(*py, k), data)
-//             .map_err(|e| from_pyerr_to_zferr(e, py))?
-//     }
-//     Ok(pydict)
-// }
-
-// /// Converts Python `PyAny` into a rust `Data`.
-// pub fn from_pyany_to_data<'a>(from: &'a PyAny, py: &'a Python) -> ZFResult<Data> {
-//     Ok(Data::from_bytes(
-//         from.cast_as::<PyBytes>()
-//             .map_err(|e| from_pyerr_to_zferr(e.into(), py))?
-//             .as_bytes()
-//             .to_vec(),
-//     ))
-// }
-
-// /// Converts rust `DataMessage` into a `PyAny` to be passed to Python.
-// pub fn from_data_to_pybytes<'a>(from: &'_ mut Data, py: &'a Python) -> ZFResult<&'a PyBytes> {
-//     Ok(PyBytes::new(*py, &from.try_as_bytes()?))
-// }
-
-// /// Converts rust `HashMap<PortId, Data>` into a `PyDict` to be passed to Python.
-// pub fn from_outputs_to_pydict<'a>(
-//     from: &'_ mut HashMap<PortId, Data>,
-//     py: &'a Python,
-// ) -> ZFResult<&'a PyDict> {
-//     let pydict = PyDict::new(*py);
-
-//     for (k, v) in from {
-//         let data = from_data_to_pybytes(v, py)?;
-
-//         pydict
-//             .set_item(PyString::new(*py, k), data)
-//             .map_err(|e| from_pyerr_to_zferr(e, py))?
-//     }
-//     Ok(pydict)
-// }
-
-// /// Converts Python `PyDict` into a rust `HashMap<PortId, NodeOutput>`.
-// pub fn from_pyany_to_or_result<'a>(
-//     from: &'a PyAny,
-//     py: &'a Python,
-// ) -> ZFResult<HashMap<PortId, NodeOutput>> {
-//     let pydict = from
-//         .cast_as::<PyDict>()
-//         .map_err(|e| from_pyerr_to_zferr(e.into(), py))?;
-
-//     let mut outputs = HashMap::with_capacity(pydict.len());
-
-//     for (k, v) in pydict.iter() {
-//         let port_id = k
-//             .cast_as::<PyString>()
-//             .map_err(|e| from_pyerr_to_zferr(e.into(), py))?
-//             .to_str()
-//             .map_err(|e| from_pyerr_to_zferr(e, py))?
-//             .to_string();
-
-//         let data = NodeOutput::Data(Data::from_bytes(
-//             v.cast_as::<PyBytes>()
-//                 .map_err(|e| from_pyerr_to_zferr(e.into(), py))?
-//                 .as_bytes()
-//                 .to_vec(),
-//         ));
-
-//         outputs.insert(port_id.into(), data);
-//     }
-
-//     Ok(outputs)
-// }
 
 pub fn configuration_into_py(py: Python, value: zenoh_flow::Configuration) -> PyResult<PyObject> {
     match value {
@@ -403,10 +108,6 @@ pub struct DataSender {
 
 // unsafe impl Send for DataSender {}
 // unsafe impl Sync for DataSender {}
-
-async fn rust_sleep() {
-    zenoh_flow::async_std::task::sleep(std::time::Duration::from_millis(500)).await;
-}
 
 #[pymethods]
 impl DataSender {
@@ -486,17 +187,17 @@ impl DataMessage {
 
     #[getter]
     pub fn get_data(&self) -> &Py<PyBytes> {
-        return &self.data;
+        &self.data
     }
 
     #[getter]
     pub fn get_ts(&self) -> &Py<PyLong> {
-        return &self.ts;
+        &self.ts
     }
 
     #[getter]
     pub fn is_watermark(&self) -> bool {
-        return self.is_watermark;
+        self.is_watermark
     }
 }
 

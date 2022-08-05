@@ -14,19 +14,19 @@
 #![feature(async_closure)]
 
 use async_trait::async_trait;
-use pyo3::types::{PyBool, PyDict, PyString};
+use pyo3::types::{PyDict, PyString};
 use pyo3::{prelude::*, types::PyModule};
 use pyo3_asyncio::TaskLocals;
-use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use zenoh_flow::runtime::message::DataMessage;
-use zenoh_flow::{async_std::sync::Arc, export_operator, types::ZFResult, Node, Operator, PortId};
-use zenoh_flow::{AsyncIteration, Configuration, Inputs, Outputs};
-use zenoh_flow::{Context, Data, ZFError};
+use std::sync::Arc;
+use zenoh_flow::{
+    export_operator, types::ZFResult, AsyncIteration, Configuration, Inputs, Node, Operator,
+    Outputs, ZFError,
+};
+use zenoh_flow_python_common::from_pyerr_to_zferr;
 use zenoh_flow_python_common::PythonState;
 use zenoh_flow_python_common::{configuration_into_py, DataReceiver, DataSender};
-use zenoh_flow_python_common::{from_pyerr_to_zferr, from_pyerr_to_zferr_no_trace};
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -46,8 +46,8 @@ impl Operator for PyOperator {
     async fn setup(
         &self,
         configuration: &Option<Configuration>,
-        mut inputs: Inputs,
-        mut outputs: Outputs,
+        inputs: Inputs,
+        outputs: Outputs,
     ) -> ZFResult<Arc<dyn AsyncIteration>> {
         let my_state = Python::with_gil(|py| {
             match configuration {
@@ -82,7 +82,7 @@ impl Operator for PyOperator {
                     for (id, input) in inputs.into_iter() {
                         let pyo3_rx = DataReceiver::from(input);
                         py_receivers
-                            .set_item(PyString::new(py, &*id), &pyo3_rx.into_py(py))
+                            .set_item(PyString::new(py, &id), &pyo3_rx.into_py(py))
                             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
                     }
 
@@ -91,7 +91,7 @@ impl Operator for PyOperator {
                     for (id, output) in outputs.into_iter() {
                         let pyo3_tx = DataSender::from(output);
                         py_senders
-                            .set_item(PyString::new(py, &*id), &pyo3_tx.into_py(py))
+                            .set_item(PyString::new(py, &id), &pyo3_tx.into_py(py))
                             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
                     }
 
@@ -129,7 +129,7 @@ impl Operator for PyOperator {
 
                 let task_locals = TaskLocals::new(event_loop);
 
-                let py_future = py_state.call0()?.clone();
+                let py_future = <&pyo3::PyAny>::clone(&py_state.call0()?);
 
                 let fut = pyo3_asyncio::into_future_with_locals(&task_locals, py_future)?;
                 pyo3_asyncio::async_std::run_until_complete(event_loop, fut)

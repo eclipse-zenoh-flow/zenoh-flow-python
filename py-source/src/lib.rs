@@ -14,16 +14,15 @@
 #![feature(async_closure)]
 
 use async_trait::async_trait;
-use pyo3::types::{PyDict, PyList, PyString};
+use pyo3::types::{PyDict, PyString};
 use pyo3::{prelude::*, types::PyModule};
 use pyo3_asyncio::TaskLocals;
 use std::fs;
 use std::path::Path;
-use zenoh_flow::async_std::sync::Arc;
-use zenoh_flow::{AsyncIteration, Configuration, Outputs};
-use zenoh_flow::{Data, Node, Source, ZFError, ZFResult};
+use std::sync::Arc;
+use zenoh_flow::{AsyncIteration, Configuration, Node, Outputs, Source, ZFError, ZFResult};
+use zenoh_flow_python_common::configuration_into_py;
 use zenoh_flow_python_common::from_pyerr_to_zferr;
-use zenoh_flow_python_common::{configuration_into_py, from_pyerr_to_zferr_no_trace};
 use zenoh_flow_python_common::{DataSender, PythonState};
 
 #[cfg(target_family = "unix")]
@@ -69,10 +68,6 @@ impl Source for PySource {
                     let py_config = configuration_into_py(py, py_config)
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    let py_zf_types = PyModule::import(py, "zenoh_flow.types")
-                        .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                        .to_object(py);
-
                     // Load Python code
                     let code = read_file(script_file_path).unwrap(); //?;
                     let module = PyModule::from_code(
@@ -93,7 +88,7 @@ impl Source for PySource {
                     for (id, output) in outputs.into_iter() {
                         let pyo3_tx = DataSender::from(output);
                         py_senders
-                            .set_item(PyString::new(py, &*id), &pyo3_tx.into_py(py))
+                            .set_item(PyString::new(py, &id), &pyo3_tx.into_py(py))
                             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
                     }
 
@@ -131,7 +126,7 @@ impl Source for PySource {
 
                 let task_locals = TaskLocals::new(event_loop);
 
-                let py_future = py_state.call0()?.clone();
+                let py_future = <&pyo3::PyAny>::clone(&py_state.call0()?);
 
                 let fut = pyo3_asyncio::into_future_with_locals(&task_locals, py_future)?;
                 pyo3_asyncio::async_std::run_until_complete(event_loop, fut)
