@@ -23,10 +23,12 @@ class MyState:
         self.value = 0
         if configuration is not None and configuration['value'] is not None:
             self.value = int(configuration['value'])
+        print(f"src config {configuration}")
 
 class MySrc(Source):
 
     def setup(self, configuration: Dict[str, Any], outputs: Dict[str, DataSender]) -> Callable[[], Any]:
+        print(f"src config (on setup) {configuration}")
         state = MyState(configuration)
         output = outputs.get('Value', None)
         return lambda: create_data(output, state)
@@ -47,13 +49,4 @@ def int_to_bytes(x: int) -> bytes:
     return x.to_bytes((x.bit_length() + 7) // 8, 'big')
 
 def register():
-    # import asyncio
-    # import threading
-    # loop = asyncio.new_event_loop()
-    # asyncio.set_event_loop(loop)
-
-    # def run_loop(loop):
-    #     loop.run_forever()
-    # threading.Thread(target=run_loop, args=(loop,)).start()
-
     return MySrc

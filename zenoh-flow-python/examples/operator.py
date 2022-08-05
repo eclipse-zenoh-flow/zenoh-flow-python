@@ -40,13 +40,4 @@ def int_from_bytes(xbytes: bytes) -> int:
     return int.from_bytes(xbytes, 'big')
 
 def register():
-    # import asyncio
-    # import threading
-    # loop = asyncio.new_event_loop()
-    # asyncio.set_event_loop(loop)
-
-    # def run_loop(loop):
-    #     loop.run_forever()
-    # threading.Thread(target=run_loop, args=(loop,)).start()
-
     return MyOp
