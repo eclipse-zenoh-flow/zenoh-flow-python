@@ -49,7 +49,7 @@ impl Operator for PyOperator {
         configuration: &Option<Configuration>,
         inputs: Inputs,
         outputs: Outputs,
-    ) -> ZFResult<Arc<dyn AsyncIteration>> {
+    ) -> ZFResult<Option<Arc<dyn AsyncIteration>>>  {
         let my_state = Python::with_gil(|py| {
             match configuration {
                 Some(configuration) => {
@@ -122,7 +122,7 @@ impl Operator for PyOperator {
             }
         })?;
 
-        Ok(Arc::new(async move || {
+        Ok(Some(Arc::new(async move || {
             Python::with_gil(|py| {
                 let py_state = my_state.py_state.cast_as::<PyAny>(py)?;
 
@@ -137,7 +137,7 @@ impl Operator for PyOperator {
             })
             .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
             Ok(())
-        }))
+        })))
     }
 }
 #[async_trait]

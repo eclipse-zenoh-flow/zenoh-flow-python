@@ -46,7 +46,7 @@ impl Sink for PySink {
         _ctx: &mut Context,
         configuration: &Option<Configuration>,
         inputs: Inputs,
-    ) -> ZFResult<Arc<dyn AsyncIteration>> {
+    ) -> ZFResult<Option<Arc<dyn AsyncIteration>>>  {
         // prepare python
         pyo3::prepare_freethreaded_python();
         let my_state = Python::with_gil(|py| {
@@ -116,7 +116,7 @@ impl Sink for PySink {
             }
         })?;
 
-        Ok(Arc::new(async move || {
+        Ok(Some(Arc::new(async move || {
             Python::with_gil(|py| {
                 let py_state = my_state.py_state.cast_as::<PyAny>(py)?;
 
@@ -131,7 +131,7 @@ impl Sink for PySink {
             })
             .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
             Ok(())
-        }))
+        })))
     }
 }
 #[async_trait]

@@ -48,7 +48,7 @@ impl Source for PySource {
         _ctx: &mut Context,
         configuration: &Option<Configuration>,
         outputs: Outputs,
-    ) -> ZFResult<Arc<dyn AsyncIteration>> {
+    ) -> ZFResult<Option<Arc<dyn AsyncIteration>>>  {
         // Preparing python
         pyo3::prepare_freethreaded_python();
 
@@ -121,7 +121,7 @@ impl Source for PySource {
             }
         })?;
 
-        Ok(Arc::new(async move || {
+        Ok(Some(Arc::new(async move || {
             Python::with_gil(|py| {
                 let py_state = my_state.py_state.cast_as::<PyAny>(py)?;
 
@@ -136,7 +136,7 @@ impl Source for PySource {
             })
             .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
             Ok(())
-        }))
+        })))
     }
 }
 
