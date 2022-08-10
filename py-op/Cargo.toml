@@ -14,7 +14,7 @@
 
 [package]
 name = "py-op"
-version = "0.2.0"
+version = "0.4.0"
 repository = "https://github.com/atolab/zenoh-flow-examples"
 homepage = "http://zenoh.io"
 authors = ["kydos <angelo@icorsaro.net>",

@@ -21,8 +21,8 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::{
-    export_operator, types::ZFResult, AsyncIteration, Configuration, Inputs, Node, Operator,
-    Outputs, ZFError,
+    export_operator, types::ZFResult, AsyncIteration, Configuration, Context, Inputs, Node,
+    Operator, Outputs, ZFError,
 };
 use zenoh_flow_python_common::from_pyerr_to_zferr;
 use zenoh_flow_python_common::PythonState;
@@ -45,6 +45,7 @@ struct PyOperator(Library);
 impl Operator for PyOperator {
     async fn setup(
         &self,
+        _ctx: &mut Context,
         configuration: &Option<Configuration>,
         inputs: Inputs,
         outputs: Outputs,

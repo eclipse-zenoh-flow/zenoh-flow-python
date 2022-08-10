@@ -20,7 +20,7 @@ use pyo3_asyncio::TaskLocals;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use zenoh_flow::{AsyncIteration, Configuration, Inputs, Node, Sink, ZFError, ZFResult};
+use zenoh_flow::{AsyncIteration, Configuration, Context, Inputs, Node, Sink, ZFError, ZFResult};
 use zenoh_flow_python_common::from_pyerr_to_zferr;
 use zenoh_flow_python_common::PythonState;
 use zenoh_flow_python_common::{configuration_into_py, DataReceiver};
@@ -43,6 +43,7 @@ struct PySink(Library);
 impl Sink for PySink {
     async fn setup(
         &self,
+        _ctx: &mut Context,
         configuration: &Option<Configuration>,
         inputs: Inputs,
     ) -> ZFResult<Arc<dyn AsyncIteration>> {

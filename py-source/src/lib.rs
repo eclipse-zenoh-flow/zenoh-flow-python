@@ -20,7 +20,9 @@ use pyo3_asyncio::TaskLocals;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use zenoh_flow::{AsyncIteration, Configuration, Node, Outputs, Source, ZFError, ZFResult};
+use zenoh_flow::{
+    AsyncIteration, Configuration, Context, Node, Outputs, Source, ZFError, ZFResult,
+};
 use zenoh_flow_python_common::configuration_into_py;
 use zenoh_flow_python_common::from_pyerr_to_zferr;
 use zenoh_flow_python_common::{DataSender, PythonState};
@@ -43,6 +45,7 @@ struct PySource(Library);
 impl Source for PySource {
     async fn setup(
         &self,
+        _ctx: &mut Context,
         configuration: &Option<Configuration>,
         outputs: Outputs,
     ) -> ZFResult<Arc<dyn AsyncIteration>> {
