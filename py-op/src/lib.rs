@@ -11,7 +11,6 @@
 // Contributors:
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
-#![feature(async_closure)]
 
 use async_trait::async_trait;
 use pyo3::types::{PyDict, PyString};
@@ -20,10 +19,7 @@ use pyo3_asyncio::TaskLocals;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use zenoh_flow::{
-    export_operator, types::ZFResult, AsyncIteration, Configuration, Context, Inputs, Node,
-    Operator, Outputs, ZFError,
-};
+use zenoh_flow::prelude::*;
 use zenoh_flow_python_common::from_pyerr_to_zferr;
 use zenoh_flow_python_common::PythonState;
 use zenoh_flow_python_common::{configuration_into_py, DataReceiver, DataSender};
@@ -49,7 +45,7 @@ impl Operator for PyOperator {
         configuration: &Option<Configuration>,
         inputs: Inputs,
         outputs: Outputs,
-    ) -> ZFResult<Option<Arc<dyn AsyncIteration>>>  {
+    ) -> ZFResult<Option<Arc<dyn AsyncIteration>>> {
         let my_state = Python::with_gil(|py| {
             match configuration {
                 Some(configuration) => {
@@ -122,7 +118,7 @@ impl Operator for PyOperator {
             }
         })?;
 
-        Ok(Some(Arc::new(async move || {
+        Ok(Some(Arc::new(move || async move {
             Python::with_gil(|py| {
                 let py_state = my_state.py_state.cast_as::<PyAny>(py)?;
 
@@ -138,31 +134,6 @@ impl Operator for PyOperator {
             .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
             Ok(())
         })))
-    }
-}
-#[async_trait]
-impl Node for PyOperator {
-    async fn finalize(&self) -> ZFResult<()> {
-        // let gil = Python::acquire_gil();
-        // let py = gil.python();
-        // let current_state = state.try_get::<PythonState>()?;
-
-        // let py_op = current_state
-        //     .module
-        //     .cast_as::<PyAny>(py)
-        //     .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
-
-        // let py_state = current_state
-        //     .py_state
-        //     .as_ref()
-        //     .cast_as::<PyAny>(py)
-        //     .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
-
-        // py_op
-        //     .call_method1("finalize", (py_op, py_state))
-        //     .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-
-        Ok(())
     }
 }
 

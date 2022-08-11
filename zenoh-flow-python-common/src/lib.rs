@@ -17,18 +17,36 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PyLong};
 use std::convert::TryFrom;
 use zenoh_flow::types::Data;
-use zenoh_flow::{Input, Message as ZFMessage, Output, ZFError};
 
-use zenoh_flow::async_std::sync::Arc;
-use zenoh_flow::zenoh_flow_derive::ZFState;
+use zenoh_flow::prelude::Message as ZFMessage;
+use zenoh_flow::prelude::*;
 
-#[derive(ZFState, Clone)]
+use std::sync::Arc;
+
+#[derive(Clone)]
 pub struct PythonState {
     pub module: Arc<PyObject>,
     pub py_state: Arc<PyObject>,
     pub event_loop: Arc<PyObject>,
     pub asyncio_module: Arc<PyObject>,
 }
+
+impl Drop for PythonState {
+    fn drop(&mut self) {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let py_op = self
+            .module
+            .cast_as::<PyAny>(py)
+            .expect("Unable to get Python Node module!");
+
+        py_op
+            .call_method1("finalize", (py_op,))
+            .expect("Unable to call Python finalize!");
+    }
+}
+
 unsafe impl Send for PythonState {}
 unsafe impl Sync for PythonState {}
 
@@ -49,24 +67,24 @@ pub fn from_pyerr_to_zferr(py_err: pyo3::PyErr, py: &pyo3::Python<'_>) -> ZFErro
     ZFError::InvalidData(err_str)
 }
 
-pub fn configuration_into_py(py: Python, value: zenoh_flow::Configuration) -> PyResult<PyObject> {
+pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObject> {
     match value {
-        zenoh_flow::Configuration::Array(arr) => {
+        Configuration::Array(arr) => {
             let py_list = PyList::empty(py);
             for v in arr {
                 py_list.append(configuration_into_py(py, v)?)?;
             }
             Ok(py_list.to_object(py))
         }
-        zenoh_flow::Configuration::Object(obj) => {
+        Configuration::Object(obj) => {
             let py_dict = PyDict::new(py);
             for (k, v) in obj {
                 py_dict.set_item(k, configuration_into_py(py, v)?)?;
             }
             Ok(py_dict.to_object(py))
         }
-        zenoh_flow::Configuration::Bool(b) => Ok(b.to_object(py)),
-        zenoh_flow::Configuration::Number(n) => {
+        Configuration::Bool(b) => Ok(b.to_object(py)),
+        Configuration::Number(n) => {
             if n.is_i64() {
                 Ok(n.as_i64()
                     .ok_or_else(|| {
@@ -96,8 +114,8 @@ pub fn configuration_into_py(py: Python, value: zenoh_flow::Configuration) -> Py
                     .to_object(py))
             }
         }
-        zenoh_flow::Configuration::String(s) => Ok(s.to_object(py)),
-        zenoh_flow::Configuration::Null => Ok(py.None()),
+        Configuration::String(s) => Ok(s.to_object(py)),
+        Configuration::Null => Ok(py.None()),
     }
 }
 
@@ -118,7 +136,7 @@ impl DataSender {
         ts: Option<u64>,
     ) -> PyResult<&'p PyAny> {
         let c_sender = self.sender.clone();
-        let rust_data = Data::from_bytes(data.as_bytes().to_owned());
+        let rust_data = Data::from(data.as_bytes());
         pyo3_asyncio::async_std::future_into_py(py, async move {
             c_sender
                 .send_async(rust_data, ts)

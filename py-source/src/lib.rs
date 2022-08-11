@@ -11,7 +11,6 @@
 // Contributors:
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
-#![feature(async_closure)]
 
 use async_trait::async_trait;
 use pyo3::types::{PyDict, PyString};
@@ -20,9 +19,7 @@ use pyo3_asyncio::TaskLocals;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use zenoh_flow::{
-    AsyncIteration, Configuration, Context, Node, Outputs, Source, ZFError, ZFResult,
-};
+use zenoh_flow::prelude::*;
 use zenoh_flow_python_common::configuration_into_py;
 use zenoh_flow_python_common::from_pyerr_to_zferr;
 use zenoh_flow_python_common::{DataSender, PythonState};
@@ -48,7 +45,7 @@ impl Source for PySource {
         _ctx: &mut Context,
         configuration: &Option<Configuration>,
         outputs: Outputs,
-    ) -> ZFResult<Option<Arc<dyn AsyncIteration>>>  {
+    ) -> ZFResult<Option<Arc<dyn AsyncIteration>>> {
         // Preparing python
         pyo3::prepare_freethreaded_python();
 
@@ -121,7 +118,7 @@ impl Source for PySource {
             }
         })?;
 
-        Ok(Some(Arc::new(async move || {
+        Ok(Some(Arc::new(move || async move {
             Python::with_gil(|py| {
                 let py_state = my_state.py_state.cast_as::<PyAny>(py)?;
 
@@ -137,32 +134,6 @@ impl Source for PySource {
             .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
             Ok(())
         })))
-    }
-}
-
-#[async_trait]
-impl Node for PySource {
-    async fn finalize(&self) -> ZFResult<()> {
-        Ok(())
-        // let gil = Python::acquire_gil();
-        // let py = gil.python();
-        // let current_state = state.try_get::<PythonState>()?;
-
-        // let py_src = current_state
-        //     .module
-        //     .cast_as::<PyAny>(py)
-        //     .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
-
-        // let py_state = current_state
-        //     .py_state
-        //     .cast_as::<PyAny>(py)
-        //     .map_err(|e| from_pyerr_to_zferr(e.into(), &py))?;
-
-        // py_src
-        //     .call_method1("finalize", (py_src, py_state))
-        //     .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-
-        // Ok(())
     }
 }
 
