@@ -18,8 +18,9 @@ use pyo3::types::{PyBytes, PyDict, PyList, PyLong};
 use std::convert::TryFrom;
 use zenoh_flow::types::Data;
 
-use zenoh_flow::prelude::Message as ZFMessage;
-use zenoh_flow::prelude::*;
+use zenoh_flow::prelude::{
+    zferror, Configuration, Error, ErrorKind, Input, Message as ZFMessage, Output,
+};
 
 use std::sync::Arc;
 
@@ -33,17 +34,20 @@ pub struct PythonState {
 
 impl Drop for PythonState {
     fn drop(&mut self) {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
+        // TODO: the finalize should be called only when the closure is dropped
+        //       commenting the code until this issue is fixed.
+        //
+        // let gil = Python::acquire_gil();
+        // let py = gil.python();
 
-        let py_op = self
-            .module
-            .cast_as::<PyAny>(py)
-            .expect("Unable to get Python Node module!");
+        // let py_op = self
+        //     .module
+        //     .cast_as::<PyAny>(py)
+        //     .expect("Unable to get Python Node module!");
 
-        py_op
-            .call_method1("finalize", (py_op,))
-            .expect("Unable to call Python finalize!");
+        // py_op
+        //     .call_method1("finalize", (py_op,))
+        //     .expect("Unable to call Python finalize!");
     }
 }
 
@@ -56,15 +60,20 @@ impl std::fmt::Debug for PythonState {
     }
 }
 
-pub fn from_pyerr_to_zferr(py_err: pyo3::PyErr, py: &pyo3::Python<'_>) -> ZFError {
+pub fn from_pyerr_to_zferr(py_err: pyo3::PyErr, py: &pyo3::Python<'_>) -> Error {
     let tb = if let Some(traceback) = py_err.traceback(*py) {
         traceback.format().map_or_else(|_| "".to_string(), |s| s)
     } else {
         "".to_string()
     };
 
-    let err_str = format!("Error: {:?}\nTraceback: {:?}", py_err, tb);
-    ZFError::InvalidData(err_str)
+    zferror!(
+        ErrorKind::InvalidData,
+        "Error: {:?}\nTraceback: {:?}",
+        py_err,
+        tb
+    )
+    .into()
 }
 
 pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObject> {

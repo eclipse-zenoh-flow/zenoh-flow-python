@@ -45,7 +45,7 @@ impl Operator for PyOperator {
         configuration: &Option<Configuration>,
         inputs: Inputs,
         outputs: Outputs,
-    ) -> ZFResult<Option<Arc<dyn AsyncIteration>>> {
+    ) -> Result<Option<Arc<dyn AsyncIteration>>> {
         let my_state = Python::with_gil(|py| {
             match configuration {
                 Some(configuration) => {
@@ -53,7 +53,7 @@ impl Operator for PyOperator {
                     let script_file_path = Path::new(
                         configuration["python-script"]
                             .as_str()
-                            .ok_or(ZFError::InvalidState)?,
+                            .ok_or(zferror!(ErrorKind::InvalidState))?,
                     );
                     let mut config = configuration.clone();
                     config["python-script"].take();
@@ -114,7 +114,7 @@ impl Operator for PyOperator {
                         asyncio_module: Arc::new(PyObject::from(asyncio)),
                     })
                 }
-                None => Err(ZFError::InvalidState),
+                None => Err(zferror!(ErrorKind::InvalidState)),
             }
         })?;
 
@@ -139,7 +139,7 @@ impl Operator for PyOperator {
 
 export_operator!(register);
 
-fn load_self() -> ZFResult<Library> {
+fn load_self() -> Result<Library> {
     log::trace!("Python Operator Wrapper loading Python {}", PY_LIB);
     // Very dirty hack! We explicit load the python library!
     let lib_name = libloading::library_filename(PY_LIB);
@@ -154,12 +154,12 @@ fn load_self() -> ZFResult<Library> {
     }
 }
 
-fn register() -> ZFResult<Arc<dyn Operator>> {
+fn register() -> Result<Arc<dyn Operator>> {
     let library = load_self()?;
 
     Ok(Arc::new(PyOperator(library)) as Arc<dyn Operator>)
 }
 
-fn read_file(path: &Path) -> ZFResult<String> {
+fn read_file(path: &Path) -> Result<String> {
     Ok(fs::read_to_string(path)?)
 }
