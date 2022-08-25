@@ -17,34 +17,39 @@ from typing import Dict, Any, Callable
 
 
 class Sink(object):
-    '''
-        The class representing a Zenoh Flow sink
-    '''
+    """
+    The class representing a Zenoh Flow sink
+    """
 
-    def setup(self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver]) -> Callable[[], Any]:
-        '''
-            The run method is called by the Zenoh Flow runtime.
-            Any sink has to implement this method.
-            This method is expected to return a function that iterates over the inputs interacting
-            with the external world.
+    def setup(
+        self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver]
+    ) -> Callable[[], Any]:
+        """
+        The run method is called by the Zenoh Flow runtime.
+        Any sink has to implement this method.
+        This method is expected to return a function that iterates over the inputs interacting
+        with the external world.
 
-            :param configuration: Configuration
-            :type configuration: dict
-            :param inputs: The input streams
-            :type inputs: :class:`Dict[str, Receiver]`
+        :param configuration: Configuration
+        :type configuration: dict
+        :param inputs: The input streams
+        :type inputs: :class:`Dict[str, Receiver]`
 
-            :rtype: Callable[[], Any]
-        '''
-        raise NotImplementedError("Please implement your own method, Sink is an interface")
-
+        :rtype: Callable[[], Any]
+        """
+        raise NotImplementedError(
+            "Please implement your own method, Sink is an interface"
+        )
 
     def finalize(self) -> None:
-        '''
-            The finalize method is called by the zenoh flow runtime.
-            This method is called when stopping the data flow graph.
-            Any sink has to implement this method.
-            This method is use to finalize any state that can be useful
-            for the sink (e.g. close files)
-            It should destroy the state.
-        '''
-        raise NotImplementedError("Please implement your own method, Sink is an interface")
+        """
+        The finalize method is called by the zenoh flow runtime.
+        This method is called when stopping the data flow graph.
+        Any sink has to implement this method.
+        This method is use to finalize any state that can be useful
+        for the sink (e.g. close files)
+        It should destroy the state.
+        """
+        raise NotImplementedError(
+            "Please implement your own method, Sink is an interface"
+        )

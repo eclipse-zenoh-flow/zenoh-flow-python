@@ -18,17 +18,20 @@ from typing import Any, Dict, Callable
 import time
 import asyncio
 
+
 class MyState:
     def __init__(self, configuration):
         self.value = 0
-        if configuration is not None and configuration['value'] is not None:
-            self.value = int(configuration['value'])
+        if configuration is not None and configuration["value"] is not None:
+            self.value = int(configuration["value"])
+
 
 class MySrc(Source):
-
-    def setup(self, configuration: Dict[str, Any], outputs: Dict[str, DataSender]) -> Callable[[], Any]:
+    def setup(
+        self, configuration: Dict[str, Any], outputs: Dict[str, DataSender]
+    ) -> Callable[[], Any]:
         state = MyState(configuration)
-        output = outputs.get('Value', None)
+        output = outputs.get("Value", None)
         return lambda: create_data(output, state)
 
     def finalize(self) -> None:
@@ -44,7 +47,8 @@ async def create_data(output, state):
 
 
 def int_to_bytes(x: int) -> bytes:
-    return x.to_bytes((x.bit_length() + 7) // 8, 'big')
+    return x.to_bytes((x.bit_length() + 7) // 8, "big")
+
 
 def register():
     return MySrc

@@ -43,12 +43,14 @@ from typing import Sequence, Optional
 
 
 class Timestamp(object):
-    '''
-        The Zenoh (Flow) timestamp.
-    '''
+    """
+    The Zenoh (Flow) timestamp.
+    """
+
     def __init__(self, ntp: int, id: str):
         self.ntp = ntp
         self.id = id
+
 
 # class DataMessage(object):
 #     '''
