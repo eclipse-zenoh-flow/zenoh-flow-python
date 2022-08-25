@@ -39,14 +39,14 @@ $ source venv/bin/activate
 (venv) $ git clone https://github.com/atolab/zenoh-flow-python
 (venv) $ cd zenoh-flow-python/zenoh-flow-python
 (venv) $ pip3 install -r requirements-dev.txt
-(venv) $ python setup.py bdist_wheel
+(venv) $ maturin build --release
 ```
 
 **Deactivate** the venv and install the python bindings.
 
 ```bash
 (venv) deactivate
-$ pip3 install ./dist/*.whl
+$ pip3 install ../target/wheels/*.whl
 ```
 
 #### Build the wrappers
