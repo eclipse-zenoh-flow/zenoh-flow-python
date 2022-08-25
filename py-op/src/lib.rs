@@ -45,8 +45,8 @@ impl Operator for PyOperator {
         configuration: &Option<Configuration>,
         inputs: Inputs,
         outputs: Outputs,
-    ) -> Result<Option<Arc<dyn AsyncIteration>>> {
-        let my_state = Python::with_gil(|py| {
+    ) -> Result<Option<Box<dyn AsyncIteration>>> {
+        let my_state = Arc::new(Python::with_gil(|py| {
             match configuration {
                 Some(configuration) => {
                     // Unwrapping configuration
@@ -116,23 +116,27 @@ impl Operator for PyOperator {
                 }
                 None => Err(zferror!(ErrorKind::InvalidState)),
             }
-        })?;
+        })?);
 
-        Ok(Some(Arc::new(move || async move {
-            Python::with_gil(|py| {
-                let py_state = my_state.py_state.cast_as::<PyAny>(py)?;
+        Ok(Some(Box::new(move || {
+            let c_state = my_state.clone();
 
-                let event_loop = my_state.event_loop.cast_as::<PyAny>(py)?;
+            async move {
+                Python::with_gil(|py| {
+                    let py_state = c_state.py_state.cast_as::<PyAny>(py)?;
 
-                let task_locals = TaskLocals::new(event_loop);
+                    let event_loop = c_state.event_loop.cast_as::<PyAny>(py)?;
 
-                let py_future = <&pyo3::PyAny>::clone(&py_state.call0()?);
+                    let task_locals = TaskLocals::new(event_loop);
 
-                let fut = pyo3_asyncio::into_future_with_locals(&task_locals, py_future)?;
-                pyo3_asyncio::async_std::run_until_complete(event_loop, fut)
-            })
-            .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
-            Ok(())
+                    let py_future = <&pyo3::PyAny>::clone(&py_state.call0()?);
+
+                    let fut = pyo3_asyncio::into_future_with_locals(&task_locals, py_future)?;
+                    pyo3_asyncio::async_std::run_until_complete(event_loop, fut)
+                })
+                .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
+                Ok(())
+            }
         })))
     }
 }
