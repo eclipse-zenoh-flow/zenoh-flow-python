@@ -101,15 +101,15 @@ impl Source for PySource {
                         .unwrap();
                     let event_loop_hdl = Arc::new(PyObject::from(event_loop));
 
-                    // setup the python source
-                    let lambda: PyObject = source_class
-                        .call_method1("setup", (source_class, py_config, py_senders))
+                    // Initialize Python Object
+                    let py_source: PyObject = source_class
+                        .call1((py_config, py_senders))
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?
                         .into();
 
                     Ok(PythonState {
                         module: Arc::new(source_class.into()),
-                        py_state: Arc::new(lambda),
+                        py_state: Arc::new(py_source),
                         event_loop: event_loop_hdl,
                         asyncio_module: Arc::new(PyObject::from(asyncio)),
                     })
@@ -122,13 +122,13 @@ impl Source for PySource {
             let c_state = my_state.clone();
             async move {
                 Python::with_gil(|py| {
-                    let py_state = c_state.py_state.cast_as::<PyAny>(py)?;
+                    let source_class = c_state.py_state.cast_as::<PyAny>(py)?;
 
                     let event_loop = c_state.event_loop.cast_as::<PyAny>(py)?;
 
                     let task_locals = TaskLocals::new(event_loop);
 
-                    let py_future = <&pyo3::PyAny>::clone(&py_state.call0()?);
+                    let py_future = source_class.call_method0("run")?;
 
                     let fut = pyo3_asyncio::into_future_with_locals(&task_locals, py_future)?;
                     pyo3_asyncio::async_std::run_until_complete(event_loop, fut)

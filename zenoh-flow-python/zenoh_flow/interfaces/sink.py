@@ -21,21 +21,31 @@ class Sink(object):
     The class representing a Zenoh Flow sink
     """
 
-    def setup(
+    def __init__(
         self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver]
-    ) -> Callable[[], Any]:
+    ) -> None:
         """
-        The run method is called by the Zenoh Flow runtime.
+        The __init__ method is called by the Zenoh Flow runtime.
         Any sink has to implement this method.
-        This method is expected to return a function that iterates over the inputs interacting
-        with the external world.
+        This method is expected to initialize the sink.
+        (E.g. storing relevant configuration and inputs)
 
         :param configuration: Configuration
         :type configuration: dict
         :param inputs: The input streams
         :type inputs: :class:`Dict[str, Receiver]`
 
-        :rtype: Callable[[], Any]
+        :rtype: None
+        """
+        raise NotImplementedError(
+            "Please implement your own method, Sink is an interface"
+        )
+
+    async def run(self):
+        """
+        The run method is called by the Zenoh Flow runtime.
+        It allows to iterate over inputs interacting with the external world.
+
         """
         raise NotImplementedError(
             "Please implement your own method, Sink is an interface"

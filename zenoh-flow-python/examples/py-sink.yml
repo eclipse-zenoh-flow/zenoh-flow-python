@@ -1,6 +1,6 @@
 id: PySink
 uri: file://./zenoh-flow-python/examples/sink.py
-input:
-  id: Value
-  type: usize
+inputs:
+  - id: Value
+    type: usize
 tags: []

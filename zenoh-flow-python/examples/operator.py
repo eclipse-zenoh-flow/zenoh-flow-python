@@ -14,32 +14,30 @@
 
 from zenoh_flow.interfaces import Operator
 from zenoh_flow import DataReceiver, DataSender
-from typing import Dict, Any, Callable
+from typing import Dict, Any
 
 
 class MyOp(Operator):
-    def setup(
+    def __init__(
         self,
         configuration: Dict[str, Any],
         inputs: Dict[str, DataReceiver],
         outputs: Dict[str, DataSender],
-    ) -> Callable[[], Any]:
-        output = outputs.get("Data", None)
-        in_stream = inputs.get("Data", None)
-        return lambda: run(in_stream, output)
+    ) -> None:
+        self.output = outputs.get("Data", None)
+        self.in_stream = inputs.get("Data", None)
 
     def finalize(self):
         return None
 
+    async def run(self):
+        # in order to wait on multiple input streams use:
+        # https://docs.python.org/3/library/asyncio-task.html#asyncio.gather
+        # eg (data_msg_0, data_msg_1) = await asyncio.gather([in0_stream.recv(), in1_stream.recv()])
 
-async def run(in_stream, out_stream):
-    # in order to wait on multiple input streams use:
-    # https://docs.python.org/3/library/asyncio-task.html#asyncio.gather
-    # eg (data_msg_0, data_msg_1) = await asyncio.gather([in0_stream.recv(), in1_stream.recv()])
-
-    data_msg = await in_stream.recv()
-    await out_stream.send(data_msg.data)
-    return None
+        data_msg = await self.in_stream.recv()
+        await self.output.send(data_msg.data)
+        return None
 
 
 def int_to_bytes(x: int) -> bytes:

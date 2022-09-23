@@ -14,12 +14,13 @@
 
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyDict, PyList, PyLong};
-use std::convert::TryFrom;
-use zenoh_flow::types::Data;
+use pyo3::types::{PyBytes, PyDict, PyList, PyLong, PyString, PyTuple};
+use std::convert::{TryFrom, TryInto};
+use zenoh_flow::bail;
 
 use zenoh_flow::prelude::{
-    zferror, Configuration, Error, ErrorKind, Input, Message as ZFMessage, Output,
+    zferror, Configuration, Context as ZFContext, Data, Error, ErrorKind, Input,
+    Message as ZFMessage, Output, PortId,
 };
 
 use std::sync::Arc;
@@ -34,20 +35,17 @@ pub struct PythonState {
 
 impl Drop for PythonState {
     fn drop(&mut self) {
-        // TODO: the finalize should be called only when the closure is dropped
-        //       commenting the code until this issue is fixed.
-        //
-        // let gil = Python::acquire_gil();
-        // let py = gil.python();
+        let gil = Python::acquire_gil();
+        let py = gil.python();
 
-        // let py_op = self
-        //     .module
-        //     .cast_as::<PyAny>(py)
-        //     .expect("Unable to get Python Node module!");
+        let py_op = self
+            .module
+            .cast_as::<PyAny>(py)
+            .expect("Unable to get Python Node module!");
 
-        // py_op
-        //     .call_method1("finalize", (py_op,))
-        //     .expect("Unable to call Python finalize!");
+        py_op
+            .call_method1("finalize", (py_op,))
+            .expect("Unable to call Python finalize!");
     }
 }
 
@@ -128,6 +126,135 @@ pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObj
     }
 }
 
+// pub fn register_python_callbacks(
+//     ctx: &mut ZFContext,
+//     py_ctx: Context,
+//     py_receivers: &PyDict,
+//     py_senders: &PyDict,
+//     py: Python,
+// ) -> PyResult<()> {
+//     let (mut cb_senders, mut cb_receivers) = py_ctx.split();
+
+//     // Converting receivers callbacks
+//     for (id, cb, receiver) in cb_receivers.drain(..) {
+//         match py_receivers.del_item(PyString::new(py, &id)) {
+//             Ok(_) => {
+//                 // This should have dropped the only reference to the Arc<Input>
+
+//                 // So we can get back an owned Input
+//                 match Arc::try_unwrap(receiver) {
+//                                     Ok(input) => {
+//                                         // If it is ok, we can now create the callback.
+//                                         input.into_callback(ctx, Box::new( move |data: zenoh_flow::prelude::Message | {
+//                                             let c_data = data.clone();
+//                                             let c_cb = cb.clone();
+
+//                                             async move {
+//                                                 let py_msg = DataMessage::try_from(c_data)?;
+
+//                                                 // Python callbacks are simple
+//                                                 // lambda functions,
+//                                                 // no awaitable can be used.
+
+//                                                 Python::with_gil(|py| {
+//                                                     c_cb.call1(py, (py_msg, ))
+//                                                 })
+//                                                 .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
+//                                                 Ok(())
+//                                             }
+//                                         }
+//                                         ));
+
+//                                     },
+//                                     Err(_) => return Err(PyTypeError::new_err(format!("Cannot get Input from Python, maybe using a callback in the iteration function?")))
+//                                 }
+//             }
+//             Err(_) => {
+//                 return Err(PyTypeError::new_err(format!(
+//                     "Cannot find {} in Python Receivers dictionary",
+//                     id
+//                 )))
+//             }
+//         }
+//     }
+
+//     // Converting senders callbacks
+//     for (id, cb, sender) in cb_senders.drain(..) {
+//         match py_senders.del_item(PyString::new(py, &id)) {
+//             Ok(_) => {
+//                 // This should have dropped the only reference to the Arc<Input>
+
+//                 // So we can get back an owned Input
+//                 match Arc::try_unwrap(sender) {
+//                                     Ok(output) => {
+//                                         // If it is ok, we can now create the callback.
+//                                         output.into_callback(ctx, Box::new( move || {
+//                                             let c_cb = cb.clone();
+//                                             async move {
+//                                                 // Python callbacks are simple
+//                                                 // lambda functions,
+//                                                 // no awaitable can be used.
+//                                                 let (data, ts) = Python::with_gil(|py| {
+//                                                     let res = c_cb.call0(py)?;
+
+//                                                     // let py_tuple_res : PyTuple = res.cast_as(py)?;
+//                                                     let py_data : &PyBytes = res.cast_as(py)?;
+
+//                                                     let rust_data = Data::from(py_data.as_bytes());
+//                                                     Ok((rust_data, None))
+
+//                                                 }).map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
+
+//                                                 Ok((data, ts)) }
+//                                         }
+//                                         ));
+
+//                                     },
+//                                     Err(_) => return Err(PyTypeError::new_err(format!("Cannot get Output from Python, maybe using a callback in the iteration function?")))
+//                                 }
+//             }
+//             Err(_) => {
+//                 return Err(PyTypeError::new_err(format!(
+//                     "Cannot find {} in Python Senders dictionary",
+//                     id
+//                 )))
+//             }
+//         }
+//     }
+//     Ok(())
+// }
+
+// /// The Python context
+// /// It contains a two vectors, with respecively the
+// /// callbacks in senders and in receivers.
+// #[pyclass]
+// pub struct Context {
+//     pub(crate) callback_senders: Vec<(PortId, Py<PyAny>, Arc<Output>)>,
+//     pub(crate) callback_receivers: Vec<(PortId, Py<PyAny>, Arc<Input>)>,
+// }
+
+// #[pymethods]
+// impl Context {
+//     #[new]
+//     pub fn new() -> Self {
+//         Self {
+//             callback_receivers: Vec::new(),
+//             callback_senders: Vec::new(),
+//         }
+//     }
+// }
+
+// impl Context {
+//     pub fn split(
+//         self,
+//     ) -> (
+//         Vec<(PortId, Py<PyAny>, Arc<Output>)>,
+//         Vec<(PortId, Py<PyAny>, Arc<Input>)>,
+//     ) {
+//         (self.callback_senders, self.callback_receivers)
+//     }
+// }
+
 #[pyclass]
 pub struct DataSender {
     pub(crate) sender: Arc<Output>,
@@ -154,6 +281,12 @@ impl DataSender {
             Ok(Python::with_gil(|py| py.None()))
         })
     }
+
+    // pub fn into_callback<'p>(&'p self, ctx: &mut Context, cb: Py<PyAny>) -> PyResult<()> {
+    //     ctx.callback_senders
+    //         .push((self.sender.port_id().clone(), cb, self.sender.clone()));
+    //     Ok(())
+    // }
 }
 
 impl From<Output> for DataSender {
@@ -184,12 +317,32 @@ impl DataReceiver {
             DataMessage::try_from(rust_msg)
         })
     }
+
+    // pub fn into_callback<'p>(&'p self, ctx: &mut Context, cb: Py<PyAny>) -> PyResult<()> {
+    //     ctx.callback_receivers
+    //         .push((self.receiver.id().clone(), cb, self.receiver.clone()));
+    //     Ok(())
+    // }
 }
 
 impl From<Input> for DataReceiver {
     fn from(other: Input) -> Self {
         Self {
             receiver: Arc::new(other),
+        }
+    }
+}
+
+impl TryInto<Input> for DataReceiver {
+    type Error = zenoh_flow::prelude::Error;
+
+    fn try_into(self) -> Result<Input, Self::Error> {
+        match Arc::try_unwrap(self.receiver) {
+            Ok(input) => Ok(input),
+            Err(_) => bail!(
+                ErrorKind::GenericError,
+                "Cannot get Input from Python, maybe using a callback in the iteration function?"
+            ),
         }
     }
 }

@@ -16,10 +16,11 @@ use async_trait::async_trait;
 use pyo3::types::{PyDict, PyString};
 use pyo3::{prelude::*, types::PyModule};
 use pyo3_asyncio::TaskLocals;
+use std::convert::{TryFrom, TryInto};
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use zenoh_flow::prelude::*;
+use zenoh_flow::{bail, prelude::*};
 use zenoh_flow_python_common::from_pyerr_to_zferr;
 use zenoh_flow_python_common::PythonState;
 use zenoh_flow_python_common::{configuration_into_py, DataReceiver, DataSender};
@@ -100,18 +101,19 @@ impl Operator for PyOperator {
                         .call_method1("set_event_loop", (event_loop,))
                         .unwrap();
                     let event_loop_hdl = Arc::new(PyObject::from(event_loop));
+                    let asyncio_module = Arc::new(PyObject::from(asyncio));
 
-                    // Initialize python state
-                    let lambda: PyObject = op_class
-                        .call_method1("setup", (op_class, py_config, py_receivers, py_senders))
+                    // Initialize Python Object
+                    let py_op: PyObject = op_class
+                        .call1((py_config, py_receivers, py_senders))
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?
                         .into();
 
                     Ok(PythonState {
                         module: Arc::new(op_class.into()),
-                        py_state: Arc::new(lambda),
+                        py_state: Arc::new(py_op),
                         event_loop: event_loop_hdl,
-                        asyncio_module: Arc::new(PyObject::from(asyncio)),
+                        asyncio_module,
                     })
                 }
                 None => Err(zferror!(ErrorKind::InvalidState)),
@@ -123,13 +125,13 @@ impl Operator for PyOperator {
 
             async move {
                 Python::with_gil(|py| {
-                    let py_state = c_state.py_state.cast_as::<PyAny>(py)?;
+                    let op_class = c_state.py_state.cast_as::<PyAny>(py)?;
 
                     let event_loop = c_state.event_loop.cast_as::<PyAny>(py)?;
 
                     let task_locals = TaskLocals::new(event_loop);
 
-                    let py_future = <&pyo3::PyAny>::clone(&py_state.call0()?);
+                    let py_future = op_class.call_method0("run")?;
 
                     let fut = pyo3_asyncio::into_future_with_locals(&task_locals, py_future)?;
                     pyo3_asyncio::async_std::run_until_complete(event_loop, fut)

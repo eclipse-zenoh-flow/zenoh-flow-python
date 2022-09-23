@@ -23,26 +23,36 @@ class Controller(object):
     something acting as source and sink at the same time. Eg. a device driver.
     """
 
-    def setup(
+    def __init__(
         self,
         configuration: Dict[str, Any],
         inputs: Dict[str, DataReceiver],
         outputs: Dict[str, DataSender],
-    ) -> Callable[[], Any]:
+    ) -> None:
         """
-        The setup method is called by the zenoh flow runtime.
-        This method is expected to return a function that iterates over
-        the inputs and outputs producing data.
-        Any controller has to implement this method.
+        The __init__ method is called by the zenoh flow runtime.
+        This method is expected to initialize the controller.
+         (E.g. storing relevant configuration, inputs and outputs)
+         Any controller has to implement this method.
 
-        :param configuration: Configuration
-        :type configuration: dict
-        :param inputs: The input streams
-        :type inputs: :class:`Dict[str, Receiver]`
-        :param outputs: The output streams
-        :type outputs: :class:`Dict[str, Sender]`
+         :param configuration: Configuration
+         :type configuration: dict
+         :param inputs: The input streams
+         :type inputs: :class:`Dict[str, Receiver]`
+         :param outputs: The output streams
+         :type outputs: :class:`Dict[str, Sender]`
 
-        :rtype: Callable[[], Any]
+         :rtype: None
+        """
+        raise NotImplementedError(
+            "Please implement your own method, Controller is an interface"
+        )
+
+    async def run(self):
+        """
+        The run method is called by the Zenoh Flow runtime.
+        This method is expected to iterates over the inputs for receiving data,
+        producing data and sends over the outputs
         """
         raise NotImplementedError(
             "Please implement your own method, Controller is an interface"

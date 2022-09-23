@@ -96,15 +96,15 @@ impl Sink for PySink {
                         .unwrap();
                     let event_loop_hdl = Arc::new(PyObject::from(event_loop));
 
-                    // Initialize python state
-                    let lambda: PyObject = sink_class
-                        .call_method1("setup", (sink_class, py_config, py_receivers))
+                    // Initialize Python Object
+                    let py_sink: PyObject = sink_class
+                        .call1((py_config, py_receivers))
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?
                         .into();
 
                     let py_state = PythonState {
                         module: Arc::new(sink_class.into()),
-                        py_state: Arc::new(lambda),
+                        py_state: Arc::new(py_sink),
                         event_loop: event_loop_hdl,
                         asyncio_module: Arc::new(PyObject::from(asyncio)),
                     };
@@ -119,13 +119,13 @@ impl Sink for PySink {
             let c_state = my_state.clone();
             async move {
                 Python::with_gil(|py| {
-                    let py_state = c_state.py_state.cast_as::<PyAny>(py)?;
+                    let sink_class = c_state.py_state.cast_as::<PyAny>(py)?;
 
                     let event_loop = c_state.event_loop.cast_as::<PyAny>(py)?;
 
                     let task_locals = TaskLocals::new(event_loop);
 
-                    let py_future = <&pyo3::PyAny>::clone(&py_state.call0()?);
+                    let py_future = sink_class.call_method0("run")?;
 
                     let fut = pyo3_asyncio::into_future_with_locals(&task_locals, py_future)?;
                     pyo3_asyncio::async_std::run_until_complete(event_loop, fut)

@@ -14,24 +14,22 @@
 
 from zenoh_flow.interfaces import Sink
 from zenoh_flow import DataReceiver
-from typing import Dict, Any, Callable
+from typing import Dict, Any
 
 
 class MySink(Sink):
     def finalize(self):
         return None
 
-    def setup(
+    def __init__(
         self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver]
-    ) -> Callable[[], Any]:
-        in_stream = inputs.get("Value", None)
-        return lambda: run(in_stream)
+    ) -> None:
+        self.in_stream = inputs.get("Value", None)
 
-
-async def run(in_stream):
-    data_msg = await in_stream.recv()
-    print(f"Received {int_from_bytes(data_msg.data)}")
-    return None
+    async def run(self):
+        data_msg = await self.in_stream.recv()
+        print(f"Received {int_from_bytes(data_msg.data)}")
+        return None
 
 
 def int_from_bytes(xbytes: bytes) -> int:
