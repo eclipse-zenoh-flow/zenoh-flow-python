@@ -18,14 +18,21 @@ from typing import Dict, Any, Callable
 
 class Sink(object):
     """
-    The class representing a Zenoh Flow sink
+    The class representing a Zenoh Flow sink.
+
+    The `__init__` method is called by the zenoh flow runtime.
+
+    It takes the following parameters:
+
+    :param configuration: Configuration
+    :type configuration: dict
+    :param inputs: The input streams
+    :type inputs: :class:`Dict[str, DataReceiver]`
     """
 
-    def __init__(
-        self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver]
-    ) -> None:
+    def __init__(self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver]):
         """
-        The __init__ method is called by the Zenoh Flow runtime.
+        The `__init__` method is called by the Zenoh Flow runtime.
         Any sink has to implement this method.
         This method is expected to initialize the sink.
         (E.g. storing relevant configuration and inputs)
@@ -33,7 +40,7 @@ class Sink(object):
         :param configuration: Configuration
         :type configuration: dict
         :param inputs: The input streams
-        :type inputs: :class:`Dict[str, Receiver]`
+        :type inputs: :class:`Dict[str, DataReceiver]`
 
         :rtype: None
         """
@@ -41,7 +48,7 @@ class Sink(object):
             "Please implement your own method, Sink is an interface"
         )
 
-    async def run(self):
+    async def run(self) -> None:
         """
         The run method is called by the Zenoh Flow runtime.
         It allows to iterate over inputs interacting with the external world.
@@ -53,12 +60,9 @@ class Sink(object):
 
     def finalize(self) -> None:
         """
-        The finalize method is called by the zenoh flow runtime.
-        This method is called when stopping the data flow graph.
-        Any sink has to implement this method.
-        This method is use to finalize any state that can be useful
-        for the sink (e.g. close files)
-        It should destroy the state.
+        The finalize method is called by the zenoh flow runtime before destroying the node (e.g., upon stopping the data flow graph).
+
+        It must implement all the required steps to destroy your sink state.
         """
         raise NotImplementedError(
             "Please implement your own method, Sink is an interface"

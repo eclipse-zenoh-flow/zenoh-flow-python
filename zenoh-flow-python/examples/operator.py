@@ -20,22 +20,26 @@ from typing import Dict, Any
 class MyOp(Operator):
     def __init__(
         self,
+        context: Context,
         configuration: Dict[str, Any],
         inputs: Dict[str, DataReceiver],
         outputs: Dict[str, DataSender],
-    ) -> None:
+    ):
         self.output = outputs.get("Data", None)
         self.in_stream = inputs.get("Data", None)
+        self.cb_in = cb_in
 
-    def finalize(self):
+    def finalize(self) -> None:
         return None
 
-    async def run(self):
+    async def run(self) -> None:
         # in order to wait on multiple input streams use:
         # https://docs.python.org/3/library/asyncio-task.html#asyncio.gather
-        # eg (data_msg_0, data_msg_1) = await asyncio.gather([in0_stream.recv(), in1_stream.recv()])
+        # or
+        # https://docs.python.org/3/library/asyncio-task.html#asyncio.wait
 
         data_msg = await self.in_stream.recv()
+
         await self.output.send(data_msg.data)
         return None
 

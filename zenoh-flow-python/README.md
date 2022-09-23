@@ -11,7 +11,7 @@
 ### Requirements
 
 - Python >= 3.7
-- pip >= 19.3.1
+- pip >= 22
 - virtualenv
 
 
@@ -22,8 +22,8 @@
 Create and activate a python virtual environment:
 
 ```bash
-$ python3 -m venv venv
-$ venv/bin/activate
+$ python3 -m virtualenv venv
+$ source venv/bin/activate
 ```
 
 Build the Python Wheel
@@ -31,13 +31,13 @@ Build the Python Wheel
 ```bash
 (venv) $ cd zenoh-flow-python
 (venv) $ pip3 install -r requirements-dev.txt
-(venv) $ python setup.py bdist_wheel
+(venv) $ maturin build --release
 ```
 
 On a separate terminal install the wheel.
 
 ```bash
-$ pip3 install /path/to/zenoh-flow-python/target/wheels/eclipse_zenoh_flow-0.2.0-py3-none-any.whl
+$ pip install ./target/wheels/<there should only be one .whl file here>
 ```
 
 ### Run an example

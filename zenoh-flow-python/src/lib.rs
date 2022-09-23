@@ -20,7 +20,5 @@ fn zenoh_flow(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<DataSender>()?;
     m.add_class::<DataReceiver>()?;
     m.add_class::<DataMessage>()?;
-    // m.add_class::<Context>()?;
-
     Ok(())
 }

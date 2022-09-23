@@ -16,7 +16,7 @@
 - Rust: see the [installation page](https://www.rust-lang.org/tools/install)
 - a matching version of libpython. On linux systems, it's typically packaged separately as ``libpython3.x-dev` or `python3.x-dev`.
 - Python >= 3.7
-- pip >= 19.3.1
+- pip >= 22
 - virtualenv
 
 
@@ -27,8 +27,8 @@
 Create and activate a python virtual environment:
 
 ```bash
-$ python3 -m venv venv
-$ venv/bin/activate
+$ python3 -m virtualenv venv
+$ source venv/bin/activate
 ```
 
 Build the Python Wheel **within** a Python virtual environment.
@@ -46,7 +46,7 @@ $ source venv/bin/activate
 
 ```bash
 (venv) deactivate
-$ pip3 install ../target/wheels/*.whl
+$ pip3 install ./target/wheels/<there should only be one .whl file here>
 ```
 
 #### Build the wrappers

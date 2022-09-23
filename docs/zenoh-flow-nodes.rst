@@ -16,9 +16,9 @@
 Zenoh Flow interfaces references
 ================================
 
-Note that API it's NOT meant to be used directly, instead your operators, sink
-and sources have to implement the methods provided by the following classes.
-Then such nodes need to be loaded by a Zenoh Flow Runtime
+Note that, this API is NOT meant to be used directly.
+Instead your operators, sink and sources MUST implement the methods provided by the following classes.
+Only then, such nodes can to be loaded by a Zenoh Flow Runtime
 
 Source
 ------

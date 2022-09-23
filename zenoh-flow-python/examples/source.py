@@ -20,9 +20,7 @@ import asyncio
 
 
 class MySrc(Source):
-    def __init__(
-        self, configuration: Dict[str, Any], outputs: Dict[str, DataSender]
-    ) -> None:
+    def __init__(self, configuration: Dict[str, Any], outputs: Dict[str, DataSender]):
         configuration = {} if configuration is None else configuration
         self.value = int(configuration.get("value", 0))
         self.output = outputs.get("Value", None)
@@ -30,7 +28,7 @@ class MySrc(Source):
     def finalize(self) -> None:
         return None
 
-    async def run(self):
+    async def run(self) -> None:
         await asyncio.sleep(0.5)
         self.value += 1
         print(f"Sending {self.value}")

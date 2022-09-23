@@ -22,24 +22,16 @@ from typing import Sequence, Optional
 #         Zenoh Flow context contains a `mode` that represent
 #         the current execution mode for the operator.
 #     '''
-#     def __init__(self, mode: int):
-#         self.mode = mode
+#     def __init__(self):
+#         self.async_callbacks = {}
+#         self.sync_callbacks = {}
 
-#     def get_mode(self) -> int:
-#         '''
-#             Gets the mode from the :class:`Context`
+#     def register_async_callback(self, input_recv, cb):
+#         input_recv.disable_recv()
+#         self.async_callbacks[port_id] = cb
 
-#             :rtype: int
-#         '''
-#         return self.mode
-
-#     def set_mode(self, mode: int) -> None:
-#         '''
-#             Sets the mode for the :class:`Context`
-
-#             :param mode the mode to be set
-#         '''
-#         self.mode = mode
+#     def register_callback(self, port_id, cb):
+#         self.sync_callbacks[port_id] = cb
 
 
 class Timestamp(object):
@@ -50,50 +42,3 @@ class Timestamp(object):
     def __init__(self, ntp: int, id: str):
         self.ntp = ntp
         self.id = id
-
-
-# class DataMessage(object):
-#     '''
-#         A Zenoh Flow Data Message.
-#         It contains:
-#         `data` as array of bytes.
-#         `ts` an uHLC timestamp associated with the data.
-#     '''
-
-#     def __init__(self, ts : Timestamp, data: bytes):
-#         self.ts = ts
-#         self.data = data
-
-#     def get_data(self) -> bytes:
-#         '''
-#             Gets the data from the :class:`DataMessage`
-
-#             :rtype: bytes
-#         '''
-#         return self.data
-
-#     def get_timestamp(self) -> Timestamp:
-#         '''
-#             Gets the timestamp from the :class:`DataMessage`
-
-#             :rtype: bytes
-#         '''
-#         return self.ts
-
-
-# class Watermark(object):
-#     '''
-#         A Zenoh Flow Watermark Message.
-#         It contains:
-#         `ts` an uHLC timestamp watermaks.
-#     '''
-#     def __init__(self, ts : Timestamp):
-#         self.data = data
-
-#     def get_timestamp(self) -> Timestamp:
-#         '''
-#             Gets the timestamp from the :class:`Watermark`
-
-#             :rtype: bytes
-#         '''
-#         return self.ts

@@ -32,6 +32,8 @@ and returns the node.
     def register():
         return MyGraphNode
 
+Each .py file is accompanied by a YAML file describing the node.
+
 
 Below some examples for simple source, sink and operator.
 
@@ -45,31 +47,36 @@ Source:
 .. code-block:: python
 
     from zenoh_flow.interfaces import Source
+    from zenoh_flow import DataSender
+    from typing import Any, Dict
     import time
+    import asyncio
 
-    class MyState:
-        def __init__(self, configuration):
-            self.value = 0
-            if configuration['value'] is not None:
-                self.value = int(configuration['value'])
 
     class MySrc(Source):
-        def initialize(self, configuration):
-            return MyState(configuration)
+        def __init__(
+            self, configuration: Dict[str, Any], outputs: Dict[str, DataSender]
+        ) -> None:
+            configuration = {} if configuration is None else configuration
+            self.value = int(configuration.get("value", 0))
+            self.output = outputs.get("Value", None)
 
-        def finalize(self, state):
+        def finalize(self) -> None:
             return None
 
-        def run(self, _ctx, state):
-            state.value += 1
-            time.sleep(1)
-            return int_to_bytes(state.value)
+        async def run(self) -> None:
+            await asyncio.sleep(0.5)
+            self.value += 1
+            print(f"Sending {self.value}")
+            await self.output.send(int_to_bytes(self.value))
+
 
     def int_to_bytes(x: int) -> bytes:
-        return x.to_bytes((x.bit_length() + 7) // 8, 'big')
+        return x.to_bytes((x.bit_length() + 7) // 8, "big")
+
 
     def register():
-        return MySrc
+    return MySrc
 
 
 
@@ -79,16 +86,29 @@ Sink:
 .. code-block:: python
 
     from zenoh_flow.interfaces import Sink
+    from zenoh_flow import DataReceiver
+    from typing import Dict, Any
+
 
     class MySink(Sink):
-        def initialize(self, configuration):
+
+        def __init__(self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver]):
+            self.in_stream = inputs.get("Value", None)
+
+        def finalize(self) -> None:
             return None
 
-        def finalize(self, state):
+
+
+        async def run(self) -> None:
+            data_msg = await self.in_stream.recv()
+            print(f"Received {int_from_bytes(data_msg.data)}")
             return None
 
-        def run(self, _ctx, _state, input):
-            print(f"Received {input}")
+
+    def int_from_bytes(xbytes: bytes) -> int:
+        return int.from_bytes(xbytes, "big")
+
 
     def register():
         return MySink
@@ -100,124 +120,50 @@ Operator:
 .. code-block:: python
 
     from zenoh_flow.interfaces import Operator
+    from zenoh_flow import DataReceiver, DataSender
+    from typing import Dict, Any
 
-    class MyState:
-        def __init__(self):
-            self.value = 0
-
-        def inc(self):
-            self.value += 1
-
-        def mod_2(self):
-            return (self.value % 2)
-
-        def mod_3(self):
-            return (self.value % 3)
 
     class MyOp(Operator):
-        def initialize(self, configuration):
-            return MyState()
+        def __init__(
+            self,
+            configuration: Dict[str, Any],
+            inputs: Dict[str, DataReceiver],
+            outputs: Dict[str, DataSender],
+        ):
+            self.output = outputs.get("Data", None)
+            self.in_stream = inputs.get("Data", None)
 
-        def finalize(self, state):
+        def finalize(self) -> None:
             return None
 
-        def input_rule(self, _ctx, state, tokens):
-            # Using input rules
-            state.inc()
-            token = tokens.get('Data')
-            if state.mod_2():
-                token.set_action_consume()
-                return True
-            elif state.mod_3():
-                token.set_action_keep()
-                return True
-            else:
-                token.set_action_drop()
-                return False
+        async def run(self) -> None:
+            # in order to wait on multiple input streams use:
+            # https://docs.python.org/3/library/asyncio-task.html#asyncio.gather
+            # or
+            # https://docs.python.org/3/library/asyncio-task.html#asyncio.wait
 
-        def output_rule(self, _ctx, _state, outputs, _deadline_miss = None):
-            return outputs
+            data_msg = await self.in_stream.recv()
+            await self.output.send(data_msg.data)
+            return None
 
-        def run(self, _ctx, _state, inputs):
-            # Getting the inputs
-            data = inputs.get('Data').get_data()
-
-            # Computing over the inputs
-            int_data = int_from_bytes(data)
-            int_data = int_data * 2
-            # Producing the outputs
-            outputs = {'Data' : int_to_bytes(int_data)}
-            return outputs
 
     def int_to_bytes(x: int) -> bytes:
-        return x.to_bytes((x.bit_length() + 7) // 8, 'big')
+        return x.to_bytes((x.bit_length() + 7) // 8, "big")
+
 
     def int_from_bytes(xbytes: bytes) -> int:
-        return int.from_bytes(xbytes, 'big')
+        return int.from_bytes(xbytes, "big")
+
 
     def register():
         return MyOp
+
 
 '''
 
 
 from .zenoh_flow import DataSender, DataReceiver, DataMessage
 
-from queue import Queue
 from zenoh_flow import interfaces
 from zenoh_flow import types
-
-
-# class Receiver(object):
-#     def __init__(self, queue, is_cb=False, cb=None):
-#         self.__queue = queue
-#         self.__is_cb = is_cb
-#         self.__cb = cb
-
-#     def recv(self):
-#         if not self.__is_cb:
-#             return self.__queue.get()
-#         return None
-
-#     def into_callback(self, cb):
-#         self.__cb = cb
-#         self.__is_cb = True
-
-#     def call(self, data):
-#         if self.__is_cb:
-#             return self.__cb(data)
-#         return None
-
-# class Sender(object):
-#     def __init__(self, queue, rx = None, is_cb=False, cb = None):
-#         self.__queue = queue
-#         self.__rx = rx
-#         self.__is_cb = is_cb
-#         self.__cb = cb
-
-#     def send(self, value):
-#         self.__queue.put(value)
-
-#     def call_rx(self, data):
-#         return self.__rx.call(data)
-
-#     def into_callback(self, cb):
-#         self.__is_cb = True
-#         self.__cb = cb
-
-#     def call_tx(self):
-#         if self.__is_cb:
-#             return self.__cb()
-#         return None
-
-
-# class Channel(object):
-#     @classmethod
-#     def new(cls, size = 0):
-#         queue = Queue(size)
-
-#         rx = Receiver(queue)
-#         tx = Sender(queue, rx)
-
-
-#         return (tx, rx)

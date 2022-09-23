@@ -21,12 +21,10 @@ class MySink(Sink):
     def finalize(self):
         return None
 
-    def __init__(
-        self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver]
-    ) -> None:
+    def __init__(self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver]):
         self.in_stream = inputs.get("Value", None)
 
-    async def run(self):
+    async def run(self) -> None:
         data_msg = await self.in_stream.recv()
         print(f"Received {int_from_bytes(data_msg.data)}")
         return None

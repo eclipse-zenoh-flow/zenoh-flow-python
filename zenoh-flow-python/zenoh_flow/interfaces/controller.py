@@ -21,6 +21,17 @@ class Controller(object):
     """
     The class representing a Zenoh Flow controller, a controller is
     something acting as source and sink at the same time. Eg. a device driver.
+
+    The `__init__` method is called by the zenoh flow runtime.
+
+    It takes the following parameters:
+
+    :param configuration: Configuration
+    :type configuration: dict
+    :param inputs: The input streams
+    :type inputs: :class:`Dict[str, Receiver]`
+    :param outputs: The output streams
+    :type outputs: :class:`Dict[str, Sender]`
     """
 
     def __init__(
@@ -28,9 +39,9 @@ class Controller(object):
         configuration: Dict[str, Any],
         inputs: Dict[str, DataReceiver],
         outputs: Dict[str, DataSender],
-    ) -> None:
+    ):
         """
-        The __init__ method is called by the zenoh flow runtime.
+        The `__init__` method is called by the zenoh flow runtime.
         This method is expected to initialize the controller.
          (E.g. storing relevant configuration, inputs and outputs)
          Any controller has to implement this method.
@@ -48,7 +59,7 @@ class Controller(object):
             "Please implement your own method, Controller is an interface"
         )
 
-    async def run(self):
+    async def run(self) -> None:
         """
         The run method is called by the Zenoh Flow runtime.
         This method is expected to iterates over the inputs for receiving data,
@@ -60,12 +71,9 @@ class Controller(object):
 
     def finalize(self) -> None:
         """
-        The finalize method is called by the zenoh flow runtime.
-        This method is called when stopping the data flow graph.
-        Any source has to implement this method.
-        This method is use to finalize any state that can be useful
-        for the controller (e.g. close files)
-        It should destroy the state.
+        The finalize method is called by the zenoh flow runtime before destroying the node (e.g., upon stopping the data flow graph).
+
+        It must implement all the required steps to destroy your controller state.
         """
         raise NotImplementedError(
             "Please implement your own method, Controller is an interface"

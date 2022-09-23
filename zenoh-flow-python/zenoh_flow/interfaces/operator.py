@@ -18,7 +18,19 @@ from typing import Dict, Any
 
 class Operator(object):
     """
-    The class representing a Zenoh Flow operator
+    The class representing a Zenoh Flow operator.
+
+    The `__init__` method is called by the zenoh flow runtime.
+
+    It takes the following parameters:
+
+    :param configuration: Configuration
+    :type configuration: dict
+    :param inputs: The input streams
+    :type inputs: :class:`Dict[str, DataReceiver]`
+    :param outputs: The output streams
+    :type outputs: :class:`Dict[str, DataSender]`
+
     """
 
     def __init__(
@@ -26,9 +38,9 @@ class Operator(object):
         configuration: Dict[str, Any],
         inputs: Dict[str, DataReceiver],
         outputs: Dict[str, DataSender],
-    ) -> None:
+    ):
         """
-        The __init__ method is called by the zenoh flow runtime.
+        The `__init__` method is called by the zenoh flow runtime.
         This method is expected to initialize the operator.
         (E.g. storing relevant configuration, inputs and outputs)
         Any operator has to implement this method.
@@ -36,9 +48,9 @@ class Operator(object):
         :param configuration: Configuration
         :type configuration: dict
         :param inputs: The input streams
-        :type inputs: :class:`Dict[str, Receiver]`
+        :type inputs: :class:`Dict[str, DataReceiver]`
         :param outputs: The output streams
-        :type outputs: :class:`Dict[str, Sender]`
+        :type outputs: :class:`Dict[str, DataSender]`
 
         :rtype: None
         """
@@ -46,7 +58,7 @@ class Operator(object):
             "Please implement your own method, Operator is an interface"
         )
 
-    async def run(self):
+    async def run(self) -> None:
         """
         The run method is called by the Zenoh Flow runtime.
         This method is expected to iterates over the inputs for receiving data,
@@ -58,12 +70,9 @@ class Operator(object):
 
     def finalize(self) -> None:
         """
-        The finalize method is called by the zenoh flow runtime.
-        This method is called when stopping the data flow graph.
-        Any operator has to implement this method.
-        This method is use to finalize any state that can be useful
-        for the operator (e.g. configuration)
-        It should destroy the state.
+        The finalize method is called by the zenoh flow runtime before destroying the node (e.g., upon stopping the data flow graph).
+
+        It must implement all the required steps to destroy your operator state.
 
         """
         raise NotImplementedError(

@@ -126,145 +126,23 @@ pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObj
     }
 }
 
-// pub fn register_python_callbacks(
-//     ctx: &mut ZFContext,
-//     py_ctx: Context,
-//     py_receivers: &PyDict,
-//     py_senders: &PyDict,
-//     py: Python,
-// ) -> PyResult<()> {
-//     let (mut cb_senders, mut cb_receivers) = py_ctx.split();
 
-//     // Converting receivers callbacks
-//     for (id, cb, receiver) in cb_receivers.drain(..) {
-//         match py_receivers.del_item(PyString::new(py, &id)) {
-//             Ok(_) => {
-//                 // This should have dropped the only reference to the Arc<Input>
-
-//                 // So we can get back an owned Input
-//                 match Arc::try_unwrap(receiver) {
-//                                     Ok(input) => {
-//                                         // If it is ok, we can now create the callback.
-//                                         input.into_callback(ctx, Box::new( move |data: zenoh_flow::prelude::Message | {
-//                                             let c_data = data.clone();
-//                                             let c_cb = cb.clone();
-
-//                                             async move {
-//                                                 let py_msg = DataMessage::try_from(c_data)?;
-
-//                                                 // Python callbacks are simple
-//                                                 // lambda functions,
-//                                                 // no awaitable can be used.
-
-//                                                 Python::with_gil(|py| {
-//                                                     c_cb.call1(py, (py_msg, ))
-//                                                 })
-//                                                 .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
-//                                                 Ok(())
-//                                             }
-//                                         }
-//                                         ));
-
-//                                     },
-//                                     Err(_) => return Err(PyTypeError::new_err(format!("Cannot get Input from Python, maybe using a callback in the iteration function?")))
-//                                 }
-//             }
-//             Err(_) => {
-//                 return Err(PyTypeError::new_err(format!(
-//                     "Cannot find {} in Python Receivers dictionary",
-//                     id
-//                 )))
-//             }
-//         }
-//     }
-
-//     // Converting senders callbacks
-//     for (id, cb, sender) in cb_senders.drain(..) {
-//         match py_senders.del_item(PyString::new(py, &id)) {
-//             Ok(_) => {
-//                 // This should have dropped the only reference to the Arc<Input>
-
-//                 // So we can get back an owned Input
-//                 match Arc::try_unwrap(sender) {
-//                                     Ok(output) => {
-//                                         // If it is ok, we can now create the callback.
-//                                         output.into_callback(ctx, Box::new( move || {
-//                                             let c_cb = cb.clone();
-//                                             async move {
-//                                                 // Python callbacks are simple
-//                                                 // lambda functions,
-//                                                 // no awaitable can be used.
-//                                                 let (data, ts) = Python::with_gil(|py| {
-//                                                     let res = c_cb.call0(py)?;
-
-//                                                     // let py_tuple_res : PyTuple = res.cast_as(py)?;
-//                                                     let py_data : &PyBytes = res.cast_as(py)?;
-
-//                                                     let rust_data = Data::from(py_data.as_bytes());
-//                                                     Ok((rust_data, None))
-
-//                                                 }).map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
-
-//                                                 Ok((data, ts)) }
-//                                         }
-//                                         ));
-
-//                                     },
-//                                     Err(_) => return Err(PyTypeError::new_err(format!("Cannot get Output from Python, maybe using a callback in the iteration function?")))
-//                                 }
-//             }
-//             Err(_) => {
-//                 return Err(PyTypeError::new_err(format!(
-//                     "Cannot find {} in Python Senders dictionary",
-//                     id
-//                 )))
-//             }
-//         }
-//     }
-//     Ok(())
-// }
-
-// /// The Python context
-// /// It contains a two vectors, with respecively the
-// /// callbacks in senders and in receivers.
-// #[pyclass]
-// pub struct Context {
-//     pub(crate) callback_senders: Vec<(PortId, Py<PyAny>, Arc<Output>)>,
-//     pub(crate) callback_receivers: Vec<(PortId, Py<PyAny>, Arc<Input>)>,
-// }
-
-// #[pymethods]
-// impl Context {
-//     #[new]
-//     pub fn new() -> Self {
-//         Self {
-//             callback_receivers: Vec::new(),
-//             callback_senders: Vec::new(),
-//         }
-//     }
-// }
-
-// impl Context {
-//     pub fn split(
-//         self,
-//     ) -> (
-//         Vec<(PortId, Py<PyAny>, Arc<Output>)>,
-//         Vec<(PortId, Py<PyAny>, Arc<Input>)>,
-//     ) {
-//         (self.callback_senders, self.callback_receivers)
-//     }
-// }
-
+/// Channels that sends data to downstream nodes.
 #[pyclass]
 pub struct DataSender {
     pub(crate) sender: Arc<Output>,
 }
 
-// unsafe impl Send for DataSender {}
-// unsafe impl Sync for DataSender {}
-
 #[pymethods]
 impl DataSender {
+
+
+    /// Send, *asynchronously*, the `DataMessage` on all channels.
+    ///
+    /// If no timestamp is provided, the current timestamp — as per the HLC — is taken.
+    ///
+    /// If an error occurs while sending the message on a channel, we still try to send it on the
+    /// remaining channels. For each failing channel, an error is logged and counted for.
     pub fn send<'p>(
         &'p self,
         py: Python<'p>,
@@ -282,11 +160,6 @@ impl DataSender {
         })
     }
 
-    // pub fn into_callback<'p>(&'p self, ctx: &mut Context, cb: Py<PyAny>) -> PyResult<()> {
-    //     ctx.callback_senders
-    //         .push((self.sender.port_id().clone(), cb, self.sender.clone()));
-    //     Ok(())
-    // }
 }
 
 impl From<Output> for DataSender {
@@ -297,16 +170,20 @@ impl From<Output> for DataSender {
     }
 }
 
+
+/// Channels that receives data from upstream nodes.
 #[pyclass(subclass)]
 pub struct DataReceiver {
     pub(crate) receiver: Arc<Input>,
 }
 
-// unsafe impl Send for DataReceiver {}
-// unsafe impl Sync for DataReceiver {}
-
 #[pymethods]
 impl DataReceiver {
+
+    /// Returns the first `DataMessage` that was received, *asynchronously*, on any of the channels
+    /// associated with this DataReceiver.
+    ///
+    /// If several `DataMessage` are received at the same time, one is randomly selected.
     pub fn recv<'p>(&'p self, py: Python<'p>) -> PyResult<&'p PyAny> {
         let c_receiver = self.receiver.clone();
         pyo3_asyncio::async_std::future_into_py(py, async move {
@@ -318,11 +195,6 @@ impl DataReceiver {
         })
     }
 
-    // pub fn into_callback<'p>(&'p self, ctx: &mut Context, cb: Py<PyAny>) -> PyResult<()> {
-    //     ctx.callback_receivers
-    //         .push((self.receiver.id().clone(), cb, self.receiver.clone()));
-    //     Ok(())
-    // }
 }
 
 impl From<Input> for DataReceiver {
@@ -347,6 +219,9 @@ impl TryInto<Input> for DataReceiver {
     }
 }
 
+/// Zenoh Flow data messages
+/// It contains the actual data, the timestamp associated, and
+/// information whether the message is a `Watermark`
 #[pyclass(subclass)]
 pub struct DataMessage {
     data: Py<PyBytes>,
@@ -356,6 +231,8 @@ pub struct DataMessage {
 
 #[pymethods]
 impl DataMessage {
+     /// Creates a new [`DataMessage`](`DataMessage`) with given bytes,
+    ///  timestamp and watermark flag.
     #[new]
     pub fn new(data: Py<PyBytes>, ts: Py<PyLong>, is_watermark: bool) -> Self {
         Self {
@@ -365,16 +242,19 @@ impl DataMessage {
         }
     }
 
+    /// Returns a reference over bytes representing the data.
     #[getter]
     pub fn get_data(&self) -> &Py<PyBytes> {
         &self.data
     }
 
+    /// Returns the data timestamp.
     #[getter]
     pub fn get_ts(&self) -> &Py<PyLong> {
         &self.ts
     }
 
+    /// Returns whether the `DataMessage` is a watermark or not.
     #[getter]
     pub fn is_watermark(&self) -> bool {
         self.is_watermark

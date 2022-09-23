@@ -19,14 +19,22 @@ from typing import Any, Dict
 
 class Source(object):
     """
-    The class representing a Zenoh Flow source
+    The class representing a Zenoh Flow source.
+
+    The `__init__` method is called by the zenoh flow runtime.
+
+    It takes the following parameters:
+
+    :param configuration: Configuration
+    :type configuration: dict
+    :param outputs: The output streams
+    :type outputs: :class:`Dict[str, DataSender]`
+
     """
 
-    def __init__(
-        self, configuration: Dict[str, Any], outputs: Dict[str, DataSender]
-    ) -> None:
+    def __init__(self, configuration: Dict[str, Any], outputs: Dict[str, DataSender]):
         """
-        The __init__ method is called by the zenoh flow runtime.
+        The `__init__` method is called by the zenoh flow runtime.
         This method is expected to initialize the source.
         (E.g. storing relevant configuration and outputs)
         Any source has to implement this method.
@@ -34,7 +42,7 @@ class Source(object):
         :param configuration: Configuration
         :type configuration: dict`
         :param outputs: The output streams
-        :type outputs: :class:`Dict[str, Sender]`
+        :type outputs: :class:`Dict[str, DataSender]`
 
         :rtype: None
         """
@@ -54,12 +62,9 @@ class Source(object):
 
     def finalize(self) -> None:
         """
-        The finalize method is called by the zenoh flow runtime.
-        This method is called when stopping the data flow graph.
-        Any source has to implement this method.
-        This method is use to finalize any state that can be useful
-        for the source (e.g. close files)
-        It should destroy the state.
+        The finalize method is called by the zenoh flow runtime before destroying the node (e.g., upon stopping the data flow graph).
+
+        It must implement all the required steps to destroy your source state.
         """
         raise NotImplementedError(
             "Please implement your own method, Source is an interface"
