@@ -16,11 +16,10 @@ use async_trait::async_trait;
 use pyo3::types::{PyDict, PyString};
 use pyo3::{prelude::*, types::PyModule};
 use pyo3_asyncio::TaskLocals;
-use std::convert::{TryFrom, TryInto};
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use zenoh_flow::{bail, prelude::*};
+use zenoh_flow::prelude::*;
 use zenoh_flow_python_common::from_pyerr_to_zferr;
 use zenoh_flow_python_common::PythonState;
 use zenoh_flow_python_common::{configuration_into_py, DataReceiver, DataSender};
@@ -54,7 +53,7 @@ impl Operator for PyOperator {
                     let script_file_path = Path::new(
                         configuration["python-script"]
                             .as_str()
-                            .ok_or(zferror!(ErrorKind::InvalidState))?,
+                            .ok_or_else(|| zferror!(ErrorKind::InvalidState))?,
                     );
                     let mut config = configuration.clone();
                     config["python-script"].take();

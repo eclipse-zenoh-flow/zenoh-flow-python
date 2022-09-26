@@ -12,15 +12,20 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 
+#![allow(clippy::borrow_deref_ref)]
+// This allow is needed for a false positive
+// when using &PyBytes as function parameter.
+
+
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyDict, PyList, PyLong, PyString, PyTuple};
+use pyo3::types::{PyBytes, PyDict, PyList, PyLong, PyString};
 use std::convert::{TryFrom, TryInto};
 use zenoh_flow::bail;
 
 use zenoh_flow::prelude::{
-    zferror, Configuration, Context as ZFContext, Data, Error, ErrorKind, Input,
-    Message as ZFMessage, Output, PortId,
+    zferror, Configuration, Data, Error, ErrorKind, Input,
+    Message as ZFMessage, Output,
 };
 
 use std::sync::Arc;

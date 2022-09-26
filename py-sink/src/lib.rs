@@ -55,7 +55,7 @@ impl Sink for PySink {
                     let script_file_path = Path::new(
                         configuration["python-script"]
                             .as_str()
-                            .ok_or(zferror!(ErrorKind::InvalidState))?,
+                            .ok_or_else( || zferror!(ErrorKind::InvalidState))?,
                     );
                     let mut config = configuration.clone();
 
