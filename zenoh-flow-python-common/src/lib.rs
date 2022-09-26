@@ -126,7 +126,6 @@ pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObj
     }
 }
 
-
 /// Channels that sends data to downstream nodes.
 #[pyclass]
 pub struct DataSender {
@@ -135,8 +134,6 @@ pub struct DataSender {
 
 #[pymethods]
 impl DataSender {
-
-
     /// Send, *asynchronously*, the `DataMessage` on all channels.
     ///
     /// If no timestamp is provided, the current timestamp — as per the HLC — is taken.
@@ -160,6 +157,14 @@ impl DataSender {
         })
     }
 
+    /// Returns the ID associated with this `DataSender`.
+    pub fn port_id<'p>(&'p self, py: Python<'p>) -> PyResult<&'p PyString> {
+        //@FIXME: this should be updated once
+        // https://github.com/eclipse-zenoh/zenoh-flow/issues/122
+        // is fixed.
+        let port_id = self.sender.port_id();
+        Ok(PyString::new(py, port_id))
+    }
 }
 
 impl From<Output> for DataSender {
@@ -170,7 +175,6 @@ impl From<Output> for DataSender {
     }
 }
 
-
 /// Channels that receives data from upstream nodes.
 #[pyclass(subclass)]
 pub struct DataReceiver {
@@ -179,7 +183,6 @@ pub struct DataReceiver {
 
 #[pymethods]
 impl DataReceiver {
-
     /// Returns the first `DataMessage` that was received, *asynchronously*, on any of the channels
     /// associated with this DataReceiver.
     ///
@@ -195,6 +198,14 @@ impl DataReceiver {
         })
     }
 
+    /// Returns the ID associated with this `DataReceiver`.
+    pub fn port_id<'p>(&'p self, py: Python<'p>) -> PyResult<&'p PyString> {
+        //@FIXME: this should be updated once
+        // https://github.com/eclipse-zenoh/zenoh-flow/issues/122
+        // is fixed.
+        let port_id = self.receiver.id();
+        Ok(PyString::new(py, port_id))
+    }
 }
 
 impl From<Input> for DataReceiver {
@@ -231,7 +242,7 @@ pub struct DataMessage {
 
 #[pymethods]
 impl DataMessage {
-     /// Creates a new [`DataMessage`](`DataMessage`) with given bytes,
+    /// Creates a new [`DataMessage`](`DataMessage`) with given bytes,
     ///  timestamp and watermark flag.
     #[new]
     pub fn new(data: Py<PyBytes>, ts: Py<PyLong>, is_watermark: bool) -> Self {
