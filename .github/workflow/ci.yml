@@ -62,5 +62,3 @@ jobs:
       - name: Install zenoh-flow-python
         run: pip3 install ./target/wheels/*.whl
 
-      - name: Run examples check
-        run: python3 tests/examples_check.py
