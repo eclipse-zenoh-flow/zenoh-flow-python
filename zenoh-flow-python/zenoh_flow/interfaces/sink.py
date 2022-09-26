@@ -13,6 +13,7 @@
 #
 
 from zenoh_flow import DataReceiver
+from zenoh_flow.types import Context
 from typing import Dict, Any, Callable
 
 
@@ -30,13 +31,20 @@ class Sink(object):
     :type inputs: :class:`Dict[str, DataReceiver]`
     """
 
-    def __init__(self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver]):
+    def __init__(
+        self,
+        context: Context,
+        configuration: Dict[str, Any],
+        inputs: Dict[str, DataReceiver],
+    ):
         """
         The `__init__` method is called by the Zenoh Flow runtime.
         Any sink has to implement this method.
         This method is expected to initialize the sink.
         (E.g. storing relevant configuration and inputs)
 
+        :param context: Zenoh Flow context
+        :type configuration: context
         :param configuration: Configuration
         :type configuration: dict
         :param inputs: The input streams

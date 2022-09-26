@@ -14,6 +14,7 @@
 
 
 from zenoh_flow import DataSender
+from zenoh_flow.types import Context
 from typing import Any, Dict
 
 
@@ -32,13 +33,20 @@ class Source(object):
 
     """
 
-    def __init__(self, configuration: Dict[str, Any], outputs: Dict[str, DataSender]):
+    def __init__(
+        self,
+        context: Context,
+        configuration: Dict[str, Any],
+        outputs: Dict[str, DataSender],
+    ):
         """
         The `__init__` method is called by the zenoh flow runtime.
         This method is expected to initialize the source.
         (E.g. storing relevant configuration and outputs)
         Any source has to implement this method.
 
+        :param context: Zenoh Flow context
+        :type configuration: context
         :param configuration: Configuration
         :type configuration: dict`
         :param outputs: The output streams

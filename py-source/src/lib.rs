@@ -20,8 +20,8 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
-use zenoh_flow_python_common::configuration_into_py;
 use zenoh_flow_python_common::from_pyerr_to_zferr;
+use zenoh_flow_python_common::{configuration_into_py, context_into_py};
 use zenoh_flow_python_common::{DataSender, PythonState};
 
 #[cfg(target_family = "unix")]
@@ -42,7 +42,7 @@ struct PySource(Library);
 impl Source for PySource {
     async fn setup(
         &self,
-        _ctx: &mut Context,
+        ctx: &mut Context,
         configuration: &Option<Configuration>,
         outputs: Outputs,
     ) -> Result<Option<Box<dyn AsyncIteration>>> {
@@ -100,10 +100,12 @@ impl Source for PySource {
                         .call_method1("set_event_loop", (event_loop,))
                         .unwrap();
                     let event_loop_hdl = Arc::new(PyObject::from(event_loop));
+                    let py_ctx =
+                        context_into_py(&py, ctx).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                     // Initialize Python Object
                     let py_source: PyObject = source_class
-                        .call1((py_config, py_senders))
+                        .call1((py_ctx, py_config, py_senders))
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?
                         .into();
 

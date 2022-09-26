@@ -14,6 +14,7 @@
 
 from zenoh_flow.interfaces import Sink
 from zenoh_flow import DataReceiver
+from zenoh_flow.types import Context
 from typing import Dict, Any
 
 
@@ -21,7 +22,12 @@ class MySink(Sink):
     def finalize(self):
         return None
 
-    def __init__(self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver]):
+    def __init__(
+        self,
+        context: Context,
+        configuration: Dict[str, Any],
+        inputs: Dict[str, DataReceiver],
+    ):
         self.in_stream = inputs.get("Value", None)
 
     async def run(self) -> None:

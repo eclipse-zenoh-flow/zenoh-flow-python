@@ -14,13 +14,19 @@
 
 from zenoh_flow.interfaces import Source
 from zenoh_flow import DataSender
+from zenoh_flow.types import Context
 from typing import Any, Dict
 import time
 import asyncio
 
 
 class MySrc(Source):
-    def __init__(self, configuration: Dict[str, Any], outputs: Dict[str, DataSender]):
+    def __init__(
+        self,
+        context: Context,
+        configuration: Dict[str, Any],
+        outputs: Dict[str, DataSender],
+    ):
         configuration = {} if configuration is None else configuration
         self.value = int(configuration.get("value", 0))
         self.output = outputs.get("Value", None)

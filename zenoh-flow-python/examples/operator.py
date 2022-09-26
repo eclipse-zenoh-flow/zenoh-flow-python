@@ -14,6 +14,7 @@
 
 from zenoh_flow.interfaces import Operator
 from zenoh_flow import DataReceiver, DataSender
+from zenoh_flow.types import Context
 from typing import Dict, Any
 
 
@@ -25,9 +26,9 @@ class MyOp(Operator):
         inputs: Dict[str, DataReceiver],
         outputs: Dict[str, DataSender],
     ):
+        print(f'Context: {context}')
         self.output = outputs.get("Data", None)
         self.in_stream = inputs.get("Data", None)
-        self.cb_in = cb_in
 
     def finalize(self) -> None:
         return None

@@ -20,9 +20,9 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
-use zenoh_flow_python_common::from_pyerr_to_zferr;
 use zenoh_flow_python_common::PythonState;
 use zenoh_flow_python_common::{configuration_into_py, DataReceiver};
+use zenoh_flow_python_common::{context_into_py, from_pyerr_to_zferr};
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -42,7 +42,7 @@ struct PySink(Library);
 impl Sink for PySink {
     async fn setup(
         &self,
-        _ctx: &mut Context,
+        ctx: &mut Context,
         configuration: &Option<Configuration>,
         inputs: Inputs,
     ) -> Result<Option<Box<dyn AsyncIteration>>> {
@@ -55,7 +55,7 @@ impl Sink for PySink {
                     let script_file_path = Path::new(
                         configuration["python-script"]
                             .as_str()
-                            .ok_or_else( || zferror!(ErrorKind::InvalidState))?,
+                            .ok_or_else(|| zferror!(ErrorKind::InvalidState))?,
                     );
                     let mut config = configuration.clone();
 
@@ -95,10 +95,12 @@ impl Sink for PySink {
                         .call_method1("set_event_loop", (event_loop,))
                         .unwrap();
                     let event_loop_hdl = Arc::new(PyObject::from(event_loop));
+                    let py_ctx =
+                        context_into_py(&py, ctx).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                     // Initialize Python Object
                     let py_sink: PyObject = sink_class
-                        .call1((py_config, py_receivers))
+                        .call1((py_ctx, py_config, py_receivers))
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?
                         .into();
 

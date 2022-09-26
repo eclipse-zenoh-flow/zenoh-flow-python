@@ -13,6 +13,7 @@
 #
 
 from zenoh_flow import DataReceiver, DataSender
+from zenoh_flow.types import Context
 from typing import Dict, Any
 
 
@@ -35,6 +36,7 @@ class Operator(object):
 
     def __init__(
         self,
+        context: Context,
         configuration: Dict[str, Any],
         inputs: Dict[str, DataReceiver],
         outputs: Dict[str, DataSender],
@@ -45,6 +47,8 @@ class Operator(object):
         (E.g. storing relevant configuration, inputs and outputs)
         Any operator has to implement this method.
 
+        :param context: Zenoh Flow context
+        :type configuration: context
         :param configuration: Configuration
         :type configuration: dict
         :param inputs: The input streams

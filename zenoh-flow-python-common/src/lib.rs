@@ -16,7 +16,6 @@
 // This allow is needed for a false positive
 // when using &PyBytes as function parameter.
 
-
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PyLong, PyString};
@@ -24,7 +23,7 @@ use std::convert::{TryFrom, TryInto};
 use zenoh_flow::bail;
 
 use zenoh_flow::prelude::{
-    zferror, Configuration, Data, Error, ErrorKind, Input,
+    zferror, Configuration, Context as ZFContext, Data, Error, ErrorKind, Input,
     Message as ZFMessage, Output,
 };
 
@@ -77,6 +76,19 @@ pub fn from_pyerr_to_zferr(py_err: pyo3::PyErr, py: &pyo3::Python<'_>) -> Error 
         tb
     )
     .into()
+}
+
+pub fn context_into_py<'p>(py: &'p Python, ctx: &ZFContext) -> PyResult<&'p PyAny> {
+    let py_zf_types = PyModule::import(*py, "zenoh_flow.types")?;
+
+    let py_ctx = py_zf_types.getattr("Context")?.call1((
+        format!("{}", ctx.get_runtime_name()),
+        format!("{}", ctx.get_runtime_uuid()),
+        format!("{}", ctx.get_flow_name()),
+        format!("{}", ctx.get_instance_id()),
+    ))?;
+
+    Ok(py_ctx)
 }
 
 pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObject> {

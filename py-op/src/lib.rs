@@ -20,9 +20,9 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
-use zenoh_flow_python_common::from_pyerr_to_zferr;
 use zenoh_flow_python_common::PythonState;
 use zenoh_flow_python_common::{configuration_into_py, DataReceiver, DataSender};
+use zenoh_flow_python_common::{context_into_py, from_pyerr_to_zferr};
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -41,7 +41,7 @@ struct PyOperator(Library);
 impl Operator for PyOperator {
     async fn setup(
         &self,
-        _ctx: &mut Context,
+        ctx: &mut Context,
         configuration: &Option<Configuration>,
         inputs: Inputs,
         outputs: Outputs,
@@ -101,10 +101,12 @@ impl Operator for PyOperator {
                         .unwrap();
                     let event_loop_hdl = Arc::new(PyObject::from(event_loop));
                     let asyncio_module = Arc::new(PyObject::from(asyncio));
+                    let py_ctx =
+                        context_into_py(&py, ctx).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                     // Initialize Python Object
                     let py_op: PyObject = op_class
-                        .call1((py_config, py_receivers, py_senders))
+                        .call1((py_ctx, py_config, py_receivers, py_senders))
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?
                         .into();
 
