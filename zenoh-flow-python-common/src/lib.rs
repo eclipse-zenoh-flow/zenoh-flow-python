@@ -18,14 +18,16 @@
 
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyDict, PyList, PyLong, PyString};
+use pyo3::types::{PyBytes, PyDict, PyList, PyLong, PyString, PyTuple};
 use std::convert::{TryFrom, TryInto};
 use zenoh_flow::bail;
+use zenoh_flow::types::Streams;
 
 use zenoh_flow::prelude::{
-    zferror, Configuration, Context as ZFContext, Data, Error, ErrorKind, Input,
-    Message as ZFMessage, Output,
+    zferror, Configuration, Context as ZFContext, Data, Error, ErrorKind, Input, Inputs,
+    Message as ZFMessage, Output, Outputs, Result as ZFResult,
 };
+use zenoh_flow::traits::{InputCallback, OutputCallback};
 
 use std::sync::Arc;
 
@@ -78,6 +80,10 @@ pub fn from_pyerr_to_zferr(py_err: pyo3::PyErr, py: &pyo3::Python<'_>) -> Error 
     .into()
 }
 
+pub fn from_pydwncasterr_to_zferr(py_err: pyo3::PyDowncastError) -> Error {
+    zferror!(ErrorKind::InvalidData, "Error: {:?}", py_err,).into()
+}
+
 pub fn context_into_py<'p>(py: &'p Python, ctx: &ZFContext) -> PyResult<&'p PyAny> {
     let py_zf_types = PyModule::import(*py, "zenoh_flow.types")?;
 
@@ -89,6 +95,125 @@ pub fn context_into_py<'p>(py: &'p Python, ctx: &ZFContext) -> PyResult<&'p PyAn
     ))?;
 
     Ok(py_ctx)
+}
+
+pub fn get_python_input_callbacks(
+    py: &Python,
+    py_context: &PyAny,
+    mut inputs: Inputs,
+) -> ZFResult<Vec<(Input, Box<dyn InputCallback>)>> {
+    let mut input_callbacks = Vec::new();
+
+    let py_input_cbs: &PyDict = py_context
+        .getattr("input_callbacks")
+        .map_err(|e| from_pyerr_to_zferr(e, &py))?
+        .cast_as()
+        .map_err(|e| from_pydwncasterr_to_zferr(e))?;
+
+    for (key, value) in py_input_cbs.iter() {
+        let input_id = key
+            .cast_as::<PyString>()
+            .map_err(|e| from_pydwncasterr_to_zferr(e))?
+            .to_str()
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+
+        let owned_callback = value.to_object(*py);
+
+        match inputs.take(input_id) {
+            Some(input) => {
+                let rust_callback = py_input_sync_callback_to_rust(owned_callback);
+                input_callbacks.push((input, rust_callback));
+            }
+            None => {
+                bail!(ErrorKind::NotFound, "Input {:?} not found", input_id)
+            }
+        }
+    }
+
+    Ok(input_callbacks)
+}
+
+pub fn py_input_sync_callback_to_rust(callback_py: Py<PyAny>) -> Box<dyn InputCallback> {
+    Box::new(move |msg: ZFMessage| {
+        let callback_py = callback_py.clone();
+
+        async move {
+            let py_msg = DataMessage::try_from(msg)?;
+            Python::with_gil(|py| callback_py.call1(py, (py_msg,)))
+                .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
+            Ok(())
+        }
+    })
+}
+
+pub fn get_python_output_callbacks(
+    py: &Python,
+    py_context: &PyAny,
+    mut outputs: Outputs,
+) -> ZFResult<Vec<(Output, Box<dyn OutputCallback>)>> {
+    let mut output_callbacks = Vec::new();
+
+    let py_input_cbs: &PyDict = py_context
+        .getattr("output_callbacks")
+        .map_err(|e| from_pyerr_to_zferr(e, &py))?
+        .cast_as()
+        .map_err(|e| from_pydwncasterr_to_zferr(e))?;
+
+    for (key, value) in py_input_cbs.iter() {
+        let output_id = key
+            .cast_as::<PyString>()
+            .map_err(|e| from_pydwncasterr_to_zferr(e))?
+            .to_str()
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+
+        let value = value
+            .cast_as::<PyTuple>()
+            .map_err(|e| from_pydwncasterr_to_zferr(e))?;
+
+        let owned_callback = value
+            .get_item(0)
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?
+            .to_object(*py);
+        let timeout_ms: u64 = value
+            .get_item(1)
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?
+            .extract()
+            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+
+        match outputs.take(output_id) {
+            Some(output) => {
+                let rust_callback = py_output_sync_callback_to_rust(owned_callback, timeout_ms);
+                output_callbacks.push((output, rust_callback));
+            }
+            None => {
+                bail!(ErrorKind::NotFound, "Output {:?} not found", output_id)
+            }
+        }
+    }
+
+    Ok(output_callbacks)
+}
+
+pub fn py_output_sync_callback_to_rust(
+    callback_py: Py<PyAny>,
+    timeout_ms: u64,
+) -> Box<dyn OutputCallback> {
+    Box::new(move || {
+        let callback_py = callback_py.clone();
+        async move {
+            // Sleeping in rust to avoid locks on Python GIL
+            async_std::task::sleep(std::time::Duration::from_millis(timeout_ms)).await;
+
+            let data_bytes = Python::with_gil(|py| {
+                let callback_result = callback_py.call0(py)?;
+                let bytes = callback_result.cast_as::<PyBytes>(py)?;
+                Ok(bytes.as_bytes().to_vec())
+            })
+            .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
+
+            Ok(Data::from(data_bytes))
+        }
+    })
 }
 
 pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObject> {
@@ -187,7 +312,15 @@ impl DataSender {
 impl From<Output> for DataSender {
     fn from(other: Output) -> Self {
         Self {
-            sender: Arc::new(other),
+            sender: Arc::new(other.clone()),
+        }
+    }
+}
+
+impl From<&Output> for DataSender {
+    fn from(other: &Output) -> Self {
+        Self {
+            sender: Arc::new(other.clone()),
         }
     }
 }
@@ -228,7 +361,15 @@ impl DataReceiver {
 impl From<Input> for DataReceiver {
     fn from(other: Input) -> Self {
         Self {
-            receiver: Arc::new(other),
+            receiver: Arc::new(other.clone()),
+        }
+    }
+}
+
+impl From<&Input> for DataReceiver {
+    fn from(other: &Input) -> Self {
+        Self {
+            receiver: Arc::new(other.clone()),
         }
     }
 }

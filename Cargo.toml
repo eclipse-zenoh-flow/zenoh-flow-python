@@ -15,21 +15,20 @@
 [workspace]
 
 members = [
-  "zenoh-flow-python-common",
-  "zenoh-flow-python",
-  "py-source",
-  "py-sink",
   "py-op",
+  "py-sink",
+  "py-source",
+  "zenoh-flow-python",
+  "zenoh-flow-python-common",
 ]
 
 [profile.dev]
-debug=true
+debug = true
 opt-level = 0
 
-
 [profile.release]
-debug=true
-lto="fat"
-codegen-units=1
-opt-level=3
-panic="abort"
+debug = true
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+panic = "abort"

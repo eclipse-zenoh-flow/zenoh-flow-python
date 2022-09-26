@@ -16,6 +16,7 @@ from zenoh_flow.interfaces import Operator
 from zenoh_flow import DataReceiver, DataSender
 from zenoh_flow.types import Context
 from typing import Dict, Any
+import asyncio
 
 
 class MyOp(Operator):
@@ -26,7 +27,7 @@ class MyOp(Operator):
         inputs: Dict[str, DataReceiver],
         outputs: Dict[str, DataSender],
     ):
-        print(f'Context: {context}')
+        print(f"Context: {context}")
         self.output = outputs.get("Data", None)
         self.in_stream = inputs.get("Data", None)
 
@@ -38,7 +39,6 @@ class MyOp(Operator):
         # https://docs.python.org/3/library/asyncio-task.html#asyncio.gather
         # or
         # https://docs.python.org/3/library/asyncio-task.html#asyncio.wait
-
         data_msg = await self.in_stream.recv()
 
         await self.output.send(data_msg.data)

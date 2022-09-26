@@ -16,16 +16,17 @@
 name = "zenoh-flow-python-common"
 version = "0.4.0"
 edition = "2018"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-zenoh-flow = { git = "https://github.com/ZettaScaleLabs/zenoh-flow.git", branch = "dev/v0.4.0"}
-uhlc = "0.5"
+async-std = { version = "=1.11.0", features = ["attributes"] }
+flume = "0.10"
+log = "0.4"
 pyo3 = "0.16"
 pyo3-asyncio = { version = "0.16", features = ["attributes", "async-std-runtime"] }
+uhlc = "0.5"
 uuid = "1.1"
-flume = "0.10"
+zenoh-flow = { git = "https://github.com/ZettaScaleLabs/zenoh-flow.git", branch = "dev/v0.4.0" }
 [features]
 abi-py37 = ["pyo3/abi3-py37"]
 default = ["abi-py37"]

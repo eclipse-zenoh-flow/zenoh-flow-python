@@ -15,7 +15,7 @@
 
 from zenoh_flow import DataReceiver, DataSender, DataMessage
 from typing import Dict, Any
-from typing import Callable, Awaitable
+from typing import Callable
 
 
 class Context(object):
@@ -23,6 +23,8 @@ class Context(object):
     A Zenoh Flow context.
     Zenoh Flow context provides access to runtime and flow information to
     the operator.
+
+    The context allows for registering callbacks in inputs and outputs.
 
     Attributes:
         runtime_name    Name of the runtime where the node is running.
@@ -39,6 +41,44 @@ class Context(object):
         self.runtime_uuid = runtime_uuid
         self.flow_name = flow_name
         self.instance_uuid = instance_uuid
+
+        self.input_callbacks = {}
+        self.output_callbacks = {}
+
+    def register_input_callback(
+        self, input_recv: DataReceiver, cb: Callable[[DataMessage], None]
+    ) -> None:
+        """
+        Registers an *synchronous* callback for the given input.
+
+        :param input_recv: DataReceiver associated to the input.
+        :type input_recv: DataReceiver
+        :param cb: Callback
+        :type cb: Callable[[DataMessage], None]
+
+        :rtype: None
+        """
+        self.input_callbacks[input_recv.port_id()] = cb
+
+    def register_output_callback(
+        self,
+        output_sender: DataSender,
+        cb: Callable[[], bytes],
+        timeout_ms: int,
+    ) -> None:
+        """
+        Registers an *synchronous* callback for the given output.
+
+        :param output_sender: DataSender associated to the output.
+        :type output_sender: DataSender
+        :param cb: Callback
+        :type cb: Callable[[], bytes]
+        :param timeout_ms: Timeout in ms used to trig
+        :type timeout_ms: Callable[[], bytes]
+
+        :rtype: None
+        """
+        self.output_callbacks[output_sender.port_id()] = (cb, timeout_ms)
 
     def __repr__(self):
         return self.__str__()

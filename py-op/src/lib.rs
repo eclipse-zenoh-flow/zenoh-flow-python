@@ -20,9 +20,11 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
-use zenoh_flow_python_common::PythonState;
-use zenoh_flow_python_common::{configuration_into_py, DataReceiver, DataSender};
+use zenoh_flow_python_common::{
+    configuration_into_py, get_python_output_callbacks, DataReceiver, DataSender,
+};
 use zenoh_flow_python_common::{context_into_py, from_pyerr_to_zferr};
+use zenoh_flow_python_common::{get_python_input_callbacks, PythonState};
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -76,7 +78,7 @@ impl Operator for PyOperator {
 
                     let py_receivers = PyDict::new(py);
 
-                    for (id, input) in inputs.into_iter() {
+                    for (id, input) in inputs.iter() {
                         let pyo3_rx = DataReceiver::from(input);
                         py_receivers
                             .set_item(PyString::new(py, &id), &pyo3_rx.into_py(py))
@@ -85,7 +87,7 @@ impl Operator for PyOperator {
 
                     let py_senders = PyDict::new(py);
 
-                    for (id, output) in outputs.into_iter() {
+                    for (id, output) in outputs.iter() {
                         let pyo3_tx = DataSender::from(output);
                         py_senders
                             .set_item(PyString::new(py, &id), &pyo3_tx.into_py(py))
@@ -110,12 +112,28 @@ impl Operator for PyOperator {
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?
                         .into();
 
-                    Ok(PythonState {
+                    let py_state = PythonState {
                         module: Arc::new(op_class.into()),
                         py_state: Arc::new(py_op),
                         event_loop: event_loop_hdl,
                         asyncio_module,
-                    })
+                    };
+
+                    // Callback setup
+                    let input_callback_hashmap = get_python_input_callbacks(&py, py_ctx, inputs)?;
+
+                    for (input, callback) in input_callback_hashmap.into_iter() {
+                        ctx.register_input_callback(input, callback)
+                    }
+
+                    let output_callback_hashmap =
+                        get_python_output_callbacks(&py, py_ctx, outputs)?;
+
+                    for (output, callback) in output_callback_hashmap.into_iter() {
+                        ctx.register_output_callback(output, callback)
+                    }
+
+                    Ok(py_state)
                 }
                 None => Err(zferror!(ErrorKind::InvalidState)),
             }
@@ -125,7 +143,7 @@ impl Operator for PyOperator {
             let c_state = my_state.clone();
 
             async move {
-                Python::with_gil(|py| {
+                let py_res = Python::with_gil(|py| {
                     let op_class = c_state.py_state.cast_as::<PyAny>(py)?;
 
                     let event_loop = c_state.event_loop.cast_as::<PyAny>(py)?;
@@ -136,8 +154,14 @@ impl Operator for PyOperator {
 
                     let fut = pyo3_asyncio::into_future_with_locals(&task_locals, py_future)?;
                     pyo3_asyncio::async_std::run_until_complete(event_loop, fut)
-                })
-                .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
+                });
+                match py_res {
+                    Ok(_) => (),
+                    Err(e) => {
+                        log::warn!("Python Operator Iteration returned error: {:?}", e);
+                    }
+                }
+                // .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
                 Ok(())
             }
         })))

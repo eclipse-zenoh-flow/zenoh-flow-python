@@ -16,6 +16,7 @@ from zenoh_flow.interfaces import Sink
 from zenoh_flow import DataReceiver
 from zenoh_flow.types import Context
 from typing import Dict, Any
+import asyncio
 
 
 class MySink(Sink):
@@ -28,12 +29,13 @@ class MySink(Sink):
         configuration: Dict[str, Any],
         inputs: Dict[str, DataReceiver],
     ):
-        self.in_stream = inputs.get("Value", None)
+        context.register_input_callback(inputs.get("Value", None), self.on_receive)
+
+    def on_receive(self, data_msg):
+        print(f"Received {int_from_bytes(data_msg.data)}")
 
     async def run(self) -> None:
-        data_msg = await self.in_stream.recv()
-        print(f"Received {int_from_bytes(data_msg.data)}")
-        return None
+        await asyncio.sleep(10)
 
 
 def int_from_bytes(xbytes: bytes) -> int:

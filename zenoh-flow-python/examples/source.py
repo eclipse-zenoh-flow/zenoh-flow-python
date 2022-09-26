@@ -29,16 +29,21 @@ class MySrc(Source):
     ):
         configuration = {} if configuration is None else configuration
         self.value = int(configuration.get("value", 0))
-        self.output = outputs.get("Value", None)
+        context.register_output_callback(
+            outputs.get("Value", None), self.produce_data, 500
+        )
+        # self.output = outputs.get("Value", None)
 
     def finalize(self) -> None:
         return None
 
-    async def run(self) -> None:
-        await asyncio.sleep(0.5)
+    def produce_data(self):
         self.value += 1
         print(f"Sending {self.value}")
-        await self.output.send(int_to_bytes(self.value))
+        return int_to_bytes(self.value)
+
+    async def run(self) -> None:
+        await asyncio.sleep(10)
 
 
 def int_to_bytes(x: int) -> bytes:

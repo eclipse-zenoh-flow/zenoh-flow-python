@@ -20,8 +20,8 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
-use zenoh_flow_python_common::from_pyerr_to_zferr;
 use zenoh_flow_python_common::{configuration_into_py, context_into_py};
+use zenoh_flow_python_common::{from_pyerr_to_zferr, get_python_output_callbacks};
 use zenoh_flow_python_common::{DataSender, PythonState};
 
 #[cfg(target_family = "unix")]
@@ -85,7 +85,7 @@ impl Source for PySource {
 
                     let py_senders = PyDict::new(py);
 
-                    for (id, output) in outputs.into_iter() {
+                    for (id, output) in outputs.iter() {
                         let pyo3_tx = DataSender::from(output);
                         py_senders
                             .set_item(PyString::new(py, &id), &pyo3_tx.into_py(py))
@@ -109,12 +109,21 @@ impl Source for PySource {
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?
                         .into();
 
-                    Ok(PythonState {
+                    let py_state = PythonState {
                         module: Arc::new(source_class.into()),
                         py_state: Arc::new(py_source),
                         event_loop: event_loop_hdl,
                         asyncio_module: Arc::new(PyObject::from(asyncio)),
-                    })
+                    };
+
+                    // Callback setup
+                    let callback_hashmap = get_python_output_callbacks(&py, py_ctx, outputs)?;
+
+                    for (output, callback) in callback_hashmap.into_iter() {
+                        ctx.register_output_callback(output, callback)
+                    }
+
+                    Ok(py_state)
                 }
                 None => Err(zferror!(ErrorKind::InvalidState)),
             }

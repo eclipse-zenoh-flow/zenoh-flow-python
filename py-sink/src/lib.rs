@@ -20,9 +20,9 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
-use zenoh_flow_python_common::PythonState;
 use zenoh_flow_python_common::{configuration_into_py, DataReceiver};
 use zenoh_flow_python_common::{context_into_py, from_pyerr_to_zferr};
+use zenoh_flow_python_common::{get_python_input_callbacks, PythonState};
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -80,7 +80,7 @@ impl Sink for PySink {
 
                     let py_receivers = PyDict::new(py);
 
-                    for (id, input) in inputs.into_iter() {
+                    for (id, input) in inputs.iter() {
                         let pyo3_rx = DataReceiver::from(input);
                         py_receivers
                             .set_item(PyString::new(py, &id), &pyo3_rx.into_py(py))
@@ -110,6 +110,13 @@ impl Sink for PySink {
                         event_loop: event_loop_hdl,
                         asyncio_module: Arc::new(PyObject::from(asyncio)),
                     };
+
+                    // Callback setup
+                    let callback_hashmap = get_python_input_callbacks(&py, py_ctx, inputs)?;
+
+                    for (input, callback) in callback_hashmap.into_iter() {
+                        ctx.register_input_callback(input, callback)
+                    }
 
                     Ok(py_state)
                 }
