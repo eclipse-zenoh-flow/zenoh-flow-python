@@ -59,10 +59,10 @@ class Controller(object):
             "Please implement your own method, Controller is an interface"
         )
 
-    async def run(self) -> None:
+    async def iteration(self) -> None:
         """
-        The run method is called by the Zenoh Flow runtime.
-        This method is expected to iterates over the inputs for receiving data,
+        The iteration method is called by the Zenoh Flow runtime, in a loop.
+        This method is expected to gets data from the inputs,
         producing data and sends over the outputs
         """
         raise NotImplementedError(

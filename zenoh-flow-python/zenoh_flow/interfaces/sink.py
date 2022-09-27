@@ -56,10 +56,10 @@ class Sink(object):
             "Please implement your own method, Sink is an interface"
         )
 
-    async def run(self) -> None:
+    async def iteration(self) -> None:
         """
-        The run method is called by the Zenoh Flow runtime.
-        It allows to iterate over inputs interacting with the external world.
+        The run method is called by the Zenoh Flow runtime, in a loop.
+        It allows wait on the inputs and interacting with the external world.
 
         """
         raise NotImplementedError(

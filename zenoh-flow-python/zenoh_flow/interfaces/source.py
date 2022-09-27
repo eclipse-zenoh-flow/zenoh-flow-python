@@ -58,11 +58,10 @@ class Source(object):
             "Please implement your own method, Source is an interface"
         )
 
-    async def run(self):
+    async def iteration(self) -> None:
         """
-        The run method is called by the Zenoh Flow runtime.
-        It allows to iterate over inputs interacting with the external world.
-        This method is expected to produce data that is then send over the outputs.
+        The run method is called by the Zenoh Flow runtime, in a loop.
+        It allows interact with the external world and send data over the outputs.
         """
         raise NotImplementedError(
             "Please implement your own method, Source is an interface"

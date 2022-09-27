@@ -25,22 +25,19 @@ class Context(object):
     the operator.
 
     The context allows for registering callbacks in inputs and outputs.
-
-    Attributes:
-        runtime_name    Name of the runtime where the node is running.
-        runtime_uuid    UUID of the runtime where the node is running.
-        flow_name       Flow of which the node is part.
-        instance_uuid   UUID of the flow instance the node is associated.
-
     """
 
     def __init__(
         self, runtime_name: str, runtime_uuid: str, flow_name: str, instance_uuid: str
     ):
         self.runtime_name = runtime_name
+        """Name of the runtime where the node is running."""
         self.runtime_uuid = runtime_uuid
+        """ UUID of the runtime where the node is running."""
         self.flow_name = flow_name
+        """Flow of which the node is part."""
         self.instance_uuid = instance_uuid
+        """UUID of the flow instance the node is associated."""
 
         self.input_callbacks = {}
         self.output_callbacks = {}
@@ -57,6 +54,13 @@ class Context(object):
         :type cb: Callable[[DataMessage], None]
 
         :rtype: None
+
+        .. warning::
+            Once a callback is registered on an input,  that input
+            **MUST NOT** be used in the `iteration` function or elsewhere in the code.
+            The input ownership is given back to Zenoh Flow, thus reusing it
+            is undefined behavior.
+
         """
         self.input_callbacks[input_recv.port_id()] = cb
 
@@ -74,9 +78,16 @@ class Context(object):
         :param cb: Callback
         :type cb: Callable[[], bytes]
         :param timeout_ms: Timeout in ms used to trig
-        :type timeout_ms: Callable[[], bytes]
+        :type timeout_ms: int
 
         :rtype: None
+
+        .. warning::
+            Once a callback is registered on an output, that output
+            **MUST NOT** be used in the `iteration` function or elsewhere in the code.
+            The output ownership is given back to Zenoh Flow, thus using it
+            is undefined behavior.
+
         """
         self.output_callbacks[output_sender.port_id()] = (cb, timeout_ms)
 

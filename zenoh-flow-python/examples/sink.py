@@ -34,7 +34,7 @@ class MySink(Sink):
     def on_receive(self, data_msg):
         print(f"Received {int_from_bytes(data_msg.data)}")
 
-    async def run(self) -> None:
+    async def iteration(self) -> None:
         await asyncio.sleep(10)
 
 

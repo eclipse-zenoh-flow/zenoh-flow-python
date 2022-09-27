@@ -134,7 +134,7 @@ impl Sink for PySink {
 
                     let task_locals = TaskLocals::new(event_loop);
 
-                    let py_future = sink_class.call_method0("run")?;
+                    let py_future = sink_class.call_method0("iteration")?;
 
                     let fut = pyo3_asyncio::into_future_with_locals(&task_locals, py_future)?;
                     pyo3_asyncio::async_std::run_until_complete(event_loop, fut)

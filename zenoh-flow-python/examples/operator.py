@@ -34,7 +34,7 @@ class MyOp(Operator):
     def finalize(self) -> None:
         return None
 
-    async def run(self) -> None:
+    async def iteration(self) -> None:
         # in order to wait on multiple input streams use:
         # https://docs.python.org/3/library/asyncio-task.html#asyncio.gather
         # or

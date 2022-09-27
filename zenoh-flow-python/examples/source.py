@@ -42,7 +42,7 @@ class MySrc(Source):
         print(f"Sending {self.value}")
         return int_to_bytes(self.value)
 
-    async def run(self) -> None:
+    async def iteration(self) -> None:
         await asyncio.sleep(10)
 
 

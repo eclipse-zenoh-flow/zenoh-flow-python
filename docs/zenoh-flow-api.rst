@@ -30,6 +30,10 @@ DataMessage
 .. autoclass:: zenoh_flow.DataMessage
     :members:
 
+Context
+-------
+.. autoclass:: zenoh_flow.types.Context
+    :members:
 
 Timestamp
 ---------

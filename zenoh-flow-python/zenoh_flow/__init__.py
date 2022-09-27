@@ -48,6 +48,7 @@ Source:
 
     from zenoh_flow.interfaces import Source
     from zenoh_flow import DataSender
+    from zenoh_flow.types import Context
     from typing import Any, Dict
     import time
     import asyncio
@@ -55,8 +56,11 @@ Source:
 
     class MySrc(Source):
         def __init__(
-            self, configuration: Dict[str, Any], outputs: Dict[str, DataSender]
-        ) -> None:
+            self,
+            context: Context,
+            configuration: Dict[str, Any],
+            outputs: Dict[str, DataSender]
+        ):
             configuration = {} if configuration is None else configuration
             self.value = int(configuration.get("value", 0))
             self.output = outputs.get("Value", None)
@@ -64,7 +68,7 @@ Source:
         def finalize(self) -> None:
             return None
 
-        async def run(self) -> None:
+        async def iteration(self) -> None:
             await asyncio.sleep(0.5)
             self.value += 1
             print(f"Sending {self.value}")
@@ -87,12 +91,17 @@ Sink:
 
     from zenoh_flow.interfaces import Sink
     from zenoh_flow import DataReceiver
+    from zenoh_flow.types import Context
     from typing import Dict, Any
 
 
     class MySink(Sink):
 
-        def __init__(self, configuration: Dict[str, Any], inputs: Dict[str, DataReceiver]):
+        def __init__(self,
+            context: Context,
+            configuration: Dict[str, Any],
+            inputs: Dict[str, DataReceiver]
+        ):
             self.in_stream = inputs.get("Value", None)
 
         def finalize(self) -> None:
@@ -100,7 +109,7 @@ Sink:
 
 
 
-        async def run(self) -> None:
+        async def iteration(self) -> None:
             data_msg = await self.in_stream.recv()
             print(f"Received {int_from_bytes(data_msg.data)}")
             return None
@@ -121,12 +130,14 @@ Operator:
 
     from zenoh_flow.interfaces import Operator
     from zenoh_flow import DataReceiver, DataSender
+    from zenoh_flow.types import Context
     from typing import Dict, Any
 
 
     class MyOp(Operator):
         def __init__(
             self,
+            context: Context,
             configuration: Dict[str, Any],
             inputs: Dict[str, DataReceiver],
             outputs: Dict[str, DataSender],
@@ -137,7 +148,7 @@ Operator:
         def finalize(self) -> None:
             return None
 
-        async def run(self) -> None:
+        async def iteration(self) -> None:
             # in order to wait on multiple input streams use:
             # https://docs.python.org/3/library/asyncio-task.html#asyncio.gather
             # or
