@@ -353,7 +353,7 @@ impl DataReceiver {
         //@FIXME: this should be updated once
         // https://github.com/eclipse-zenoh/zenoh-flow/issues/122
         // is fixed.
-        let port_id = self.receiver.id();
+        let port_id = self.receiver.port_id();
         Ok(PyString::new(py, port_id))
     }
 }
