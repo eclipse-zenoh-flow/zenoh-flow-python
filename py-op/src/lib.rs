@@ -143,7 +143,7 @@ impl Operator for PyOperator {
             let c_state = my_state.clone();
 
             async move {
-                let py_res = Python::with_gil(|py| {
+                Python::with_gil(|py| {
                     let op_class = c_state.py_state.cast_as::<PyAny>(py)?;
 
                     let event_loop = c_state.event_loop.cast_as::<PyAny>(py)?;
@@ -154,14 +154,8 @@ impl Operator for PyOperator {
 
                     let fut = pyo3_asyncio::into_future_with_locals(&task_locals, py_future)?;
                     pyo3_asyncio::async_std::run_until_complete(event_loop, fut)
-                });
-                match py_res {
-                    Ok(_) => (),
-                    Err(e) => {
-                        log::warn!("Python Operator Iteration returned error: {:?}", e);
-                    }
-                }
-                // .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
+                })
+                .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
                 Ok(())
             }
         })))
