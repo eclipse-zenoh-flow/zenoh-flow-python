@@ -13,7 +13,7 @@
 #
 
 
-from zenoh_flow import DataSender
+from zenoh_flow import Output
 from zenoh_flow.types import Context
 from typing import Any, Dict
 
@@ -29,7 +29,7 @@ class Source(object):
     :param configuration: Configuration
     :type configuration: dict
     :param outputs: The output streams
-    :type outputs: :class:`Dict[str, DataSender]`
+    :type outputs: :class:`Dict[str, Output]`
 
     """
 
@@ -37,7 +37,7 @@ class Source(object):
         self,
         context: Context,
         configuration: Dict[str, Any],
-        outputs: Dict[str, DataSender],
+        outputs: Dict[str, Output],
     ):
         """
         The `__init__` method is called by the zenoh flow runtime.
@@ -50,7 +50,7 @@ class Source(object):
         :param configuration: Configuration
         :type configuration: dict`
         :param outputs: The output streams
-        :type outputs: :class:`Dict[str, DataSender]`
+        :type outputs: :class:`Dict[str, Output]`
 
         :rtype: None
         """
@@ -61,7 +61,8 @@ class Source(object):
     async def iteration(self) -> None:
         """
         The run method is called by the Zenoh Flow runtime, in a loop.
-        It allows interact with the external world and send data over the outputs.
+        It allows interact with the external world and
+        send data over the outputs.
         """
         raise NotImplementedError(
             "Please implement your own method, Source is an interface"
@@ -69,7 +70,8 @@ class Source(object):
 
     def finalize(self) -> None:
         """
-        The finalize method is called by the zenoh flow runtime before destroying the node (e.g., upon stopping the data flow graph).
+        The finalize method is called by the zenoh flow runtime
+        before destroying the node (e.g., upon stopping the data flow graph).
 
         It must implement all the required steps to destroy your source state.
         """

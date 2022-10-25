@@ -13,8 +13,7 @@
 #
 
 
-from zenoh_flow import DataReceiver, DataSender, DataMessage
-from typing import Dict, Any
+from zenoh_flow import Input, Output, DataMessage
 from typing import Callable
 
 
@@ -28,7 +27,11 @@ class Context(object):
     """
 
     def __init__(
-        self, runtime_name: str, runtime_uuid: str, flow_name: str, instance_uuid: str
+        self,
+        runtime_name: str,
+        runtime_uuid: str,
+        flow_name: str,
+        instance_uuid: str
     ):
         self.runtime_name = runtime_name
         """Name of the runtime where the node is running."""
@@ -43,7 +46,9 @@ class Context(object):
         self.output_callbacks = {}
 
     def register_input_callback(
-        self, input_recv: DataReceiver, cb: Callable[[DataMessage], None]
+        self,
+        input_recv: Input,
+        cb: Callable[[DataMessage], None]
     ) -> None:
         """
         Registers an *synchronous* callback for the given input.
@@ -57,7 +62,8 @@ class Context(object):
 
         .. warning::
             Once a callback is registered on an input,  that input
-            **MUST NOT** be used in the `iteration` function or elsewhere in the code.
+            **MUST NOT** be used in the `iteration` function
+            or elsewhere in the code.
             The input ownership is given back to Zenoh Flow, thus reusing it
             is undefined behavior.
 
@@ -66,7 +72,7 @@ class Context(object):
 
     def register_output_callback(
         self,
-        output_sender: DataSender,
+        output_sender: Output,
         cb: Callable[[], bytes],
         timeout_ms: int,
     ) -> None:
@@ -84,7 +90,8 @@ class Context(object):
 
         .. warning::
             Once a callback is registered on an output, that output
-            **MUST NOT** be used in the `iteration` function or elsewhere in the code.
+            **MUST NOT** be used in the `iteration`
+            function or elsewhere in the code.
             The output ownership is given back to Zenoh Flow, thus using it
             is undefined behavior.
 
@@ -98,7 +105,8 @@ class Context(object):
         return (
             f"Context(runtime_name={self.runtime_name}, "
             + f"runtime_uuid={self.runtime_uuid}, "
-            + f"flow_name={self.flow_name}, instance_uuid={self.instance_uuid})"
+            + f"flow_name={self.flow_name}, "
+            + f"instance_uuid={self.instance_uuid})"
         )
 
 
@@ -119,4 +127,4 @@ class Timestamp(object):
         return self.__str__()
 
     def __str__(self):
-        return f"Timestamp(ntp={self.ntp}, " + f"id={self.id})"
+        return f"Timestamp(ntp={self.ntp}, id={self.id})"

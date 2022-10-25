@@ -12,9 +12,9 @@
 #   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 #
 
-from zenoh_flow import DataReceiver
+from zenoh_flow import Input
 from zenoh_flow.types import Context
-from typing import Dict, Any, Callable
+from typing import Dict, Any
 
 
 class Sink(object):
@@ -28,14 +28,14 @@ class Sink(object):
     :param configuration: Configuration
     :type configuration: dict
     :param inputs: The input streams
-    :type inputs: :class:`Dict[str, DataReceiver]`
+    :type inputs: :class:`Dict[str, Input]`
     """
 
     def __init__(
         self,
         context: Context,
         configuration: Dict[str, Any],
-        inputs: Dict[str, DataReceiver],
+        inputs: Dict[str, Input],
     ):
         """
         The `__init__` method is called by the Zenoh Flow runtime.
@@ -48,7 +48,7 @@ class Sink(object):
         :param configuration: Configuration
         :type configuration: dict
         :param inputs: The input streams
-        :type inputs: :class:`Dict[str, DataReceiver]`
+        :type inputs: :class:`Dict[str, Input]`
 
         :rtype: None
         """
@@ -68,7 +68,8 @@ class Sink(object):
 
     def finalize(self) -> None:
         """
-        The finalize method is called by the zenoh flow runtime before destroying the node (e.g., upon stopping the data flow graph).
+        The finalize method is called by the zenoh flow runtime before
+        destroying the node (e.g., upon stopping the data flow graph).
 
         It must implement all the required steps to destroy your sink state.
         """

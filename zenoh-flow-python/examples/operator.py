@@ -13,7 +13,7 @@
 #
 
 from zenoh_flow.interfaces import Operator
-from zenoh_flow import DataReceiver, DataSender
+from zenoh_flow import Input, Output
 from zenoh_flow.types import Context
 from typing import Dict, Any
 import asyncio
@@ -24,8 +24,8 @@ class MyOp(Operator):
         self,
         context: Context,
         configuration: Dict[str, Any],
-        inputs: Dict[str, DataReceiver],
-        outputs: Dict[str, DataSender],
+        inputs: Dict[str, Input],
+        outputs: Dict[str, Output],
     ):
         print(f"Context: {context}")
         self.output = outputs.get("Data", None)

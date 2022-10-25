@@ -174,7 +174,7 @@ Operator:
 '''
 
 
-from .zenoh_flow import DataSender, DataReceiver, DataMessage
+from .zenoh_flow import Input, Output, DataMessage
 
 from zenoh_flow import interfaces
 from zenoh_flow import types

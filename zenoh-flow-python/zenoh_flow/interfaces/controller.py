@@ -13,8 +13,8 @@
 #
 
 
-from zenoh_flow import DataReceiver, DataSender
-from typing import Any, Dict, Callable
+from zenoh_flow import Input, Output
+from typing import Any, Dict
 
 
 class Controller(object):
@@ -37,8 +37,8 @@ class Controller(object):
     def __init__(
         self,
         configuration: Dict[str, Any],
-        inputs: Dict[str, DataReceiver],
-        outputs: Dict[str, DataSender],
+        inputs: Dict[str, Input],
+        outputs: Dict[str, Output],
     ):
         """
         The `__init__` method is called by the zenoh flow runtime.
@@ -71,9 +71,11 @@ class Controller(object):
 
     def finalize(self) -> None:
         """
-        The finalize method is called by the zenoh flow runtime before destroying the node (e.g., upon stopping the data flow graph).
+        The finalize method is called by the zenoh flow runtime before
+        destroying the node (e.g., upon stopping the data flow graph).
 
-        It must implement all the required steps to destroy your controller state.
+        It must implement all the required steps to destroy
+        your controller state.
         """
         raise NotImplementedError(
             "Please implement your own method, Controller is an interface"

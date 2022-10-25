@@ -21,7 +21,7 @@ use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
 use zenoh_flow_python_common::{
-    configuration_into_py, get_python_output_callbacks, DataReceiver, DataSender,
+    configuration_into_py, get_python_output_callbacks, Input as PyInput, Output as PyOutput,
 };
 use zenoh_flow_python_common::{context_into_py, from_pyerr_to_zferr};
 use zenoh_flow_python_common::{get_python_input_callbacks, PythonState};
@@ -79,7 +79,7 @@ impl OperatorFactoryTrait for PyOperatorFactory {
                     let py_receivers = PyDict::new(py);
 
                     for (id, input) in inputs.iter() {
-                        let pyo3_rx = DataReceiver::from(input);
+                        let pyo3_rx = PyInput::from(input);
                         py_receivers
                             .set_item(PyString::new(py, &id), &pyo3_rx.into_py(py))
                             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
@@ -88,7 +88,7 @@ impl OperatorFactoryTrait for PyOperatorFactory {
                     let py_senders = PyDict::new(py);
 
                     for (id, output) in outputs.iter() {
-                        let pyo3_tx = DataSender::from(output);
+                        let pyo3_tx = PyOutput::from(output);
                         py_senders
                             .set_item(PyString::new(py, &id), &pyo3_tx.into_py(py))
                             .map_err(|e| from_pyerr_to_zferr(e, &py))?;

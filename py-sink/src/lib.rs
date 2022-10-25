@@ -20,7 +20,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
-use zenoh_flow_python_common::{configuration_into_py, DataReceiver};
+use zenoh_flow_python_common::{configuration_into_py, Input as PyInput};
 use zenoh_flow_python_common::{context_into_py, from_pyerr_to_zferr};
 use zenoh_flow_python_common::{get_python_input_callbacks, PythonState};
 
@@ -81,7 +81,7 @@ impl SinkFactoryTrait for PySinkFactory {
                     let py_receivers = PyDict::new(py);
 
                     for (id, input) in inputs.iter() {
-                        let pyo3_rx = DataReceiver::from(input);
+                        let pyo3_rx = PyInput::from(input);
                         py_receivers
                             .set_item(PyString::new(py, &id), &pyo3_rx.into_py(py))
                             .map_err(|e| from_pyerr_to_zferr(e, &py))?;

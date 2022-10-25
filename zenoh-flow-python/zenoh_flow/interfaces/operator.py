@@ -12,7 +12,7 @@
 #   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 #
 
-from zenoh_flow import DataReceiver, DataSender
+from zenoh_flow import Input, Output
 from zenoh_flow.types import Context
 from typing import Dict, Any
 
@@ -28,9 +28,9 @@ class Operator(object):
     :param configuration: Configuration
     :type configuration: dict
     :param inputs: The input streams
-    :type inputs: :class:`Dict[str, DataReceiver]`
+    :type inputs: :class:`Dict[str, Input]`
     :param outputs: The output streams
-    :type outputs: :class:`Dict[str, DataSender]`
+    :type outputs: :class:`Dict[str, Output]`
 
     """
 
@@ -38,8 +38,8 @@ class Operator(object):
         self,
         context: Context,
         configuration: Dict[str, Any],
-        inputs: Dict[str, DataReceiver],
-        outputs: Dict[str, DataSender],
+        inputs: Dict[str, Input],
+        outputs: Dict[str, Output],
     ):
         """
         The `__init__` method is called by the zenoh flow runtime.
@@ -52,9 +52,9 @@ class Operator(object):
         :param configuration: Configuration
         :type configuration: dict
         :param inputs: The input streams
-        :type inputs: :class:`Dict[str, DataReceiver]`
+        :type inputs: :class:`Dict[str, Input]`
         :param outputs: The output streams
-        :type outputs: :class:`Dict[str, DataSender]`
+        :type outputs: :class:`Dict[str, Output]`
 
         :rtype: None
         """
@@ -74,9 +74,11 @@ class Operator(object):
 
     def finalize(self) -> None:
         """
-        The finalize method is called by the zenoh flow runtime before destroying the node (e.g., upon stopping the data flow graph).
+        The finalize method is called by the zenoh flow runtime before
+        destroying the node (e.g., upon stopping the data flow graph).
 
-        It must implement all the required steps to destroy your operator state.
+        It must implement all the required steps to destroy
+        your operator state.
 
         """
         raise NotImplementedError(

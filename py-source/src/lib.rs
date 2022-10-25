@@ -22,7 +22,7 @@ use std::sync::Arc;
 use zenoh_flow::prelude::*;
 use zenoh_flow_python_common::{configuration_into_py, context_into_py};
 use zenoh_flow_python_common::{from_pyerr_to_zferr, get_python_output_callbacks};
-use zenoh_flow_python_common::{DataSender, PythonState};
+use zenoh_flow_python_common::{Output as PyOutput, PythonState};
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -85,7 +85,7 @@ impl SourceFactoryTrait for PySourceFactory {
                     let py_senders = PyDict::new(py);
 
                     for (id, output) in outputs.iter() {
-                        let pyo3_tx = DataSender::from(output);
+                        let pyo3_tx = PyOutput::from(output);
                         py_senders
                             .set_item(PyString::new(py, &id), &pyo3_tx.into_py(py))
                             .map_err(|e| from_pyerr_to_zferr(e, &py))?;

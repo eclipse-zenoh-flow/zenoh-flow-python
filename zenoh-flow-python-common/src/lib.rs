@@ -24,8 +24,8 @@ use zenoh_flow::bail;
 use zenoh_flow::types::Streams;
 
 use zenoh_flow::prelude::{
-    zferror, Configuration, Context as ZFContext, Data, Error, ErrorKind, Input, Inputs,
-    Message as ZFMessage, Output, Outputs, Result as ZFResult,
+    zferror, Configuration, Context as ZFContext, Data, Error, ErrorKind, Input as ZInput, Inputs,
+    Message as ZFMessage, Output as ZOutput, Outputs, Result as ZFResult,
 };
 use zenoh_flow::traits::{InputCallback, OutputCallback};
 
@@ -101,7 +101,7 @@ pub fn get_python_input_callbacks(
     py: &Python,
     py_context: &PyAny,
     mut inputs: Inputs,
-) -> ZFResult<Vec<(Input, Arc<dyn InputCallback>)>> {
+) -> ZFResult<Vec<(ZInput, Arc<dyn InputCallback>)>> {
     let mut input_callbacks = Vec::new();
 
     let py_input_cbs: &PyDict = py_context
@@ -150,7 +150,7 @@ pub fn get_python_output_callbacks(
     py: &Python,
     py_context: &PyAny,
     mut outputs: Outputs,
-) -> ZFResult<Vec<(Output, Arc<dyn OutputCallback>)>> {
+) -> ZFResult<Vec<(ZOutput, Arc<dyn OutputCallback>)>> {
     let mut output_callbacks = Vec::new();
 
     let py_input_cbs: &PyDict = py_context
@@ -270,12 +270,12 @@ pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObj
 
 /// Channels that sends data to downstream nodes.
 #[pyclass]
-pub struct DataSender {
-    pub(crate) sender: Arc<Output>,
+pub struct Output {
+    pub(crate) sender: Arc<ZOutput>,
 }
 
 #[pymethods]
-impl DataSender {
+impl Output {
     /// Send, *asynchronously*, the `DataMessage` on all channels.
     ///
     /// If no timestamp is provided, the current timestamp — as per the HLC — is taken.
@@ -299,7 +299,7 @@ impl DataSender {
         })
     }
 
-    /// Returns the ID associated with this `DataSender`.
+    /// Returns the ID associated with this `Output`.
     pub fn port_id<'p>(&'p self, py: Python<'p>) -> PyResult<&'p PyString> {
         //@FIXME: this should be updated once
         // https://github.com/eclipse-zenoh/zenoh-flow/issues/122
@@ -309,16 +309,16 @@ impl DataSender {
     }
 }
 
-impl From<Output> for DataSender {
-    fn from(other: Output) -> Self {
+impl From<ZOutput> for Output {
+    fn from(other: ZOutput) -> Self {
         Self {
             sender: Arc::new(other.clone()),
         }
     }
 }
 
-impl From<&Output> for DataSender {
-    fn from(other: &Output) -> Self {
+impl From<&ZOutput> for Output {
+    fn from(other: &ZOutput) -> Self {
         Self {
             sender: Arc::new(other.clone()),
         }
@@ -327,14 +327,14 @@ impl From<&Output> for DataSender {
 
 /// Channels that receives data from upstream nodes.
 #[pyclass(subclass)]
-pub struct DataReceiver {
-    pub(crate) receiver: Arc<Input>,
+pub struct Input {
+    pub(crate) receiver: Arc<ZInput>,
 }
 
 #[pymethods]
-impl DataReceiver {
+impl Input {
     /// Returns the first `DataMessage` that was received, *asynchronously*, on any of the channels
-    /// associated with this DataReceiver.
+    /// associated with this Input.
     ///
     /// If several `DataMessage` are received at the same time, one is randomly selected.
     pub fn recv<'p>(&'p self, py: Python<'p>) -> PyResult<&'p PyAny> {
@@ -348,7 +348,7 @@ impl DataReceiver {
         })
     }
 
-    /// Returns the ID associated with this `DataReceiver`.
+    /// Returns the ID associated with this `Input`.
     pub fn port_id<'p>(&'p self, py: Python<'p>) -> PyResult<&'p PyString> {
         //@FIXME: this should be updated once
         // https://github.com/eclipse-zenoh/zenoh-flow/issues/122
@@ -358,26 +358,26 @@ impl DataReceiver {
     }
 }
 
-impl From<Input> for DataReceiver {
-    fn from(other: Input) -> Self {
+impl From<ZInput> for Input {
+    fn from(other: ZInput) -> Self {
         Self {
             receiver: Arc::new(other.clone()),
         }
     }
 }
 
-impl From<&Input> for DataReceiver {
-    fn from(other: &Input) -> Self {
+impl From<&ZInput> for Input {
+    fn from(other: &ZInput) -> Self {
         Self {
             receiver: Arc::new(other.clone()),
         }
     }
 }
 
-impl TryInto<Input> for DataReceiver {
+impl TryInto<ZInput> for Input {
     type Error = zenoh_flow::prelude::Error;
 
-    fn try_into(self) -> Result<Input, Self::Error> {
+    fn try_into(self) -> Result<ZInput, Self::Error> {
         match Arc::try_unwrap(self.receiver) {
             Ok(input) => Ok(input),
             Err(_) => bail!(
