@@ -101,7 +101,7 @@ pub fn get_python_input_callbacks(
     py: &Python,
     py_context: &PyAny,
     mut inputs: Inputs,
-) -> ZFResult<Vec<(Input, Box<dyn InputCallback>)>> {
+) -> ZFResult<Vec<(Input, Arc<dyn InputCallback>)>> {
     let mut input_callbacks = Vec::new();
 
     let py_input_cbs: &PyDict = py_context
@@ -133,8 +133,8 @@ pub fn get_python_input_callbacks(
     Ok(input_callbacks)
 }
 
-pub fn py_input_sync_callback_to_rust(callback_py: Py<PyAny>) -> Box<dyn InputCallback> {
-    Box::new(move |msg: ZFMessage| {
+pub fn py_input_sync_callback_to_rust(callback_py: Py<PyAny>) -> Arc<dyn InputCallback> {
+    Arc::new(move |msg: ZFMessage| {
         let callback_py = callback_py.clone();
 
         async move {
@@ -150,7 +150,7 @@ pub fn get_python_output_callbacks(
     py: &Python,
     py_context: &PyAny,
     mut outputs: Outputs,
-) -> ZFResult<Vec<(Output, Box<dyn OutputCallback>)>> {
+) -> ZFResult<Vec<(Output, Arc<dyn OutputCallback>)>> {
     let mut output_callbacks = Vec::new();
 
     let py_input_cbs: &PyDict = py_context
@@ -197,8 +197,8 @@ pub fn get_python_output_callbacks(
 pub fn py_output_sync_callback_to_rust(
     callback_py: Py<PyAny>,
     timeout_ms: u64,
-) -> Box<dyn OutputCallback> {
-    Box::new(move || {
+) -> Arc<dyn OutputCallback> {
+    Arc::new(move || {
         let callback_py = callback_py.clone();
         async move {
             // Sleeping in rust to avoid locks on Python GIL

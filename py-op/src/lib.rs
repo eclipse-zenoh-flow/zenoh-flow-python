@@ -37,17 +37,17 @@ static LOAD_FLAGS: std::os::raw::c_int =
 
 pub static PY_LIB: &str = env!("PY_LIB");
 
-struct PyOperator(Library);
+struct PyOperatorFactory(Library);
 
 #[async_trait]
-impl Operator for PyOperator {
-    async fn setup(
+impl OperatorFactoryTrait for PyOperatorFactory {
+    async fn new_operator(
         &self,
         ctx: &mut Context,
         configuration: &Option<Configuration>,
         inputs: Inputs,
         outputs: Outputs,
-    ) -> Result<Option<Box<dyn AsyncIteration>>> {
+    ) -> Result<Option<Arc<dyn Node>>> {
         let my_state = Arc::new(Python::with_gil(|py| {
             match configuration {
                 Some(configuration) => {
@@ -139,30 +139,33 @@ impl Operator for PyOperator {
             }
         })?);
 
-        Ok(Some(Box::new(move || {
-            let c_state = my_state.clone();
-
-            async move {
-                Python::with_gil(|py| {
-                    let op_class = c_state.py_state.cast_as::<PyAny>(py)?;
-
-                    let event_loop = c_state.event_loop.cast_as::<PyAny>(py)?;
-
-                    let task_locals = TaskLocals::new(event_loop);
-
-                    let py_future = op_class.call_method0("iteration")?;
-
-                    let fut = pyo3_asyncio::into_future_with_locals(&task_locals, py_future)?;
-                    pyo3_asyncio::async_std::run_until_complete(event_loop, fut)
-                })
-                .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
-                Ok(())
-            }
-        })))
+        Ok(Some(Arc::new(PyOperator(my_state))))
     }
 }
 
-export_operator!(register);
+struct PyOperator(Arc<PythonState>);
+
+#[async_trait]
+impl Node for PyOperator {
+    async fn iteration(&self) -> Result<()> {
+        Python::with_gil(|py| {
+            let op_class = self.0.py_state.cast_as::<PyAny>(py)?;
+
+            let event_loop = self.0.event_loop.cast_as::<PyAny>(py)?;
+
+            let task_locals = TaskLocals::new(event_loop);
+
+            let py_future = op_class.call_method0("iteration")?;
+
+            let fut = pyo3_asyncio::into_future_with_locals(&task_locals, py_future)?;
+            pyo3_asyncio::async_std::run_until_complete(event_loop, fut)
+        })
+        .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
+        Ok(())
+    }
+}
+
+export_operator_factory!(register);
 
 fn load_self() -> Result<Library> {
     log::trace!("Python Operator Wrapper loading Python {}", PY_LIB);
@@ -179,10 +182,10 @@ fn load_self() -> Result<Library> {
     }
 }
 
-fn register() -> Result<Arc<dyn Operator>> {
+fn register() -> Result<Arc<dyn OperatorFactoryTrait>> {
     let library = load_self()?;
 
-    Ok(Arc::new(PyOperator(library)) as Arc<dyn Operator>)
+    Ok(Arc::new(PyOperatorFactory(library)) as Arc<dyn OperatorFactoryTrait>)
 }
 
 fn read_file(path: &Path) -> Result<String> {
