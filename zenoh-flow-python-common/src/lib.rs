@@ -301,9 +301,6 @@ impl Output {
 
     /// Returns the ID associated with this `Output`.
     pub fn port_id<'p>(&'p self, py: Python<'p>) -> PyResult<&'p PyString> {
-        //@FIXME: this should be updated once
-        // https://github.com/eclipse-zenoh/zenoh-flow/issues/122
-        // is fixed.
         let port_id = self.sender.port_id();
         Ok(PyString::new(py, port_id))
     }
@@ -350,9 +347,6 @@ impl Input {
 
     /// Returns the ID associated with this `Input`.
     pub fn port_id<'p>(&'p self, py: Python<'p>) -> PyResult<&'p PyString> {
-        //@FIXME: this should be updated once
-        // https://github.com/eclipse-zenoh/zenoh-flow/issues/122
-        // is fixed.
         let port_id = self.receiver.port_id();
         Ok(PyString::new(py, port_id))
     }
