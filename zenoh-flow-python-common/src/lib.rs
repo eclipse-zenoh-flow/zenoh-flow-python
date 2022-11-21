@@ -106,16 +106,16 @@ pub fn get_python_input_callbacks(
 
     let py_input_cbs: &PyDict = py_context
         .getattr("input_callbacks")
-        .map_err(|e| from_pyerr_to_zferr(e, &py))?
+        .map_err(|e| from_pyerr_to_zferr(e, py))?
         .cast_as()
-        .map_err(|e| from_pydwncasterr_to_zferr(e))?;
+        .map_err(from_pydwncasterr_to_zferr)?;
 
     for (key, value) in py_input_cbs.iter() {
         let input_id = key
             .cast_as::<PyString>()
-            .map_err(|e| from_pydwncasterr_to_zferr(e))?
+            .map_err(from_pydwncasterr_to_zferr)?
             .to_str()
-            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            .map_err(|e| from_pyerr_to_zferr(e, py))?;
 
         let owned_callback = value.to_object(*py);
 
@@ -155,30 +155,30 @@ pub fn get_python_output_callbacks(
 
     let py_input_cbs: &PyDict = py_context
         .getattr("output_callbacks")
-        .map_err(|e| from_pyerr_to_zferr(e, &py))?
+        .map_err(|e| from_pyerr_to_zferr(e, py))?
         .cast_as()
-        .map_err(|e| from_pydwncasterr_to_zferr(e))?;
+        .map_err(from_pydwncasterr_to_zferr)?;
 
     for (key, value) in py_input_cbs.iter() {
         let output_id = key
             .cast_as::<PyString>()
-            .map_err(|e| from_pydwncasterr_to_zferr(e))?
+            .map_err(from_pydwncasterr_to_zferr)?
             .to_str()
-            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            .map_err(|e| from_pyerr_to_zferr(e, py))?;
 
         let value = value
             .cast_as::<PyTuple>()
-            .map_err(|e| from_pydwncasterr_to_zferr(e))?;
+            .map_err(from_pydwncasterr_to_zferr)?;
 
         let owned_callback = value
             .get_item(0)
-            .map_err(|e| from_pyerr_to_zferr(e, &py))?
+            .map_err(|e| from_pyerr_to_zferr(e, py))?
             .to_object(*py);
         let timeout_ms: u64 = value
             .get_item(1)
-            .map_err(|e| from_pyerr_to_zferr(e, &py))?
+            .map_err(|e| from_pyerr_to_zferr(e, py))?
             .extract()
-            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            .map_err(|e| from_pyerr_to_zferr(e, py))?;
 
         match outputs.take(output_id) {
             Some(output) => {
@@ -309,7 +309,7 @@ impl Output {
 impl From<ZOutput> for Output {
     fn from(other: ZOutput) -> Self {
         Self {
-            sender: Arc::new(other.clone()),
+            sender: Arc::new(other),
         }
     }
 }
@@ -355,7 +355,7 @@ impl Input {
 impl From<ZInput> for Input {
     fn from(other: ZInput) -> Self {
         Self {
-            receiver: Arc::new(other.clone()),
+            receiver: Arc::new(other),
         }
     }
 }

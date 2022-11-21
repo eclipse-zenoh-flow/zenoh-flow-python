@@ -37,18 +37,25 @@ static LOAD_FLAGS: std::os::raw::c_int =
 
 pub static PY_LIB: &str = env!("PY_LIB");
 
-struct PyOperatorFactory(Library);
+#[derive(Clone)]
+struct PyOperator {
+    state: Arc<PythonState>,
+    _lib: Arc<Library>,
+}
 
 #[async_trait]
-impl OperatorFactoryTrait for PyOperatorFactory {
-    async fn new_operator(
-        &self,
+impl Operator for PyOperator {
+    fn new(
         ctx: &mut Context,
         configuration: &Option<Configuration>,
         inputs: Inputs,
         outputs: Outputs,
-    ) -> Result<Option<Arc<dyn Node>>> {
-        let my_state = Arc::new(Python::with_gil(|py| {
+    ) -> Result<Option<Self>> {
+        let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
+
+        pyo3::prepare_freethreaded_python();
+
+        let state = Arc::new(Python::with_gil(|py| {
             match configuration {
                 Some(configuration) => {
                     // Unwrapping configuration
@@ -81,7 +88,7 @@ impl OperatorFactoryTrait for PyOperatorFactory {
                     for (id, input) in inputs.iter() {
                         let pyo3_rx = PyInput::from(input);
                         py_receivers
-                            .set_item(PyString::new(py, &id), &pyo3_rx.into_py(py))
+                            .set_item(PyString::new(py, id), &pyo3_rx.into_py(py))
                             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
                     }
 
@@ -90,7 +97,7 @@ impl OperatorFactoryTrait for PyOperatorFactory {
                     for (id, output) in outputs.iter() {
                         let pyo3_tx = PyOutput::from(output);
                         py_senders
-                            .set_item(PyString::new(py, &id), &pyo3_tx.into_py(py))
+                            .set_item(PyString::new(py, id), &pyo3_tx.into_py(py))
                             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
                     }
 
@@ -139,19 +146,14 @@ impl OperatorFactoryTrait for PyOperatorFactory {
             }
         })?);
 
-        Ok(Some(Arc::new(PyOperator(my_state))))
+        Ok(Some(Self { _lib: lib, state }))
     }
-}
 
-struct PyOperator(Arc<PythonState>);
-
-#[async_trait]
-impl Node for PyOperator {
     async fn iteration(&self) -> Result<()> {
         Python::with_gil(|py| {
-            let op_class = self.0.py_state.cast_as::<PyAny>(py)?;
+            let op_class = self.state.py_state.cast_as::<PyAny>(py)?;
 
-            let event_loop = self.0.event_loop.cast_as::<PyAny>(py)?;
+            let event_loop = self.state.event_loop.cast_as::<PyAny>(py)?;
 
             let task_locals = TaskLocals::new(event_loop);
 
@@ -165,7 +167,7 @@ impl Node for PyOperator {
     }
 }
 
-export_operator_factory!(register);
+export_operator!(PyOperator);
 
 fn load_self() -> Result<Library> {
     log::trace!("Python Operator Wrapper loading Python {}", PY_LIB);
@@ -180,12 +182,6 @@ fn load_self() -> Result<Library> {
 
         Ok(lib)
     }
-}
-
-fn register() -> Result<Arc<dyn OperatorFactoryTrait>> {
-    let library = load_self()?;
-
-    Ok(Arc::new(PyOperatorFactory(library)) as Arc<dyn OperatorFactoryTrait>)
 }
 
 fn read_file(path: &Path) -> Result<String> {
