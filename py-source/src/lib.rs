@@ -20,9 +20,9 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
-use zenoh_flow_python_common::{configuration_into_py, context_into_py};
-use zenoh_flow_python_common::{from_pyerr_to_zferr, get_python_output_callbacks};
-use zenoh_flow_python_common::{Output as PyOutput, PythonState};
+use zenoh_flow_python_common::{
+    configuration_into_py, context_into_py, from_pyerr_to_zferr, Output as PyOutput, PythonState,
+};
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -35,21 +35,25 @@ static LOAD_FLAGS: std::os::raw::c_int =
 
 pub static PY_LIB: &str = env!("PY_LIB");
 
-struct PySourceFactory(Library);
+#[export_source]
+struct PySource {
+    state: Arc<PythonState>,
+    _lib: Arc<Library>,
+}
 
 #[async_trait]
-impl SourceFactoryTrait for PySourceFactory {
-    async fn new_source(
-        &self,
-        context: &mut Context,
-        configuration: &Option<Configuration>,
+impl Source for PySource {
+    async fn new(
+        context: Context,
+        configuration: Option<Configuration>,
         outputs: Outputs,
-    ) -> Result<Option<Arc<dyn Node>>> {
-        // Preparing python
+    ) -> Result<Self> {
+        let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
+
         pyo3::prepare_freethreaded_python();
 
         // Configuring wrapper + python source
-        let my_state = Arc::new(Python::with_gil(|py| {
+        let state = Arc::new(Python::with_gil(|py| {
             match configuration {
                 Some(configuration) => {
                     // Unwrapping configuration
@@ -87,7 +91,7 @@ impl SourceFactoryTrait for PySourceFactory {
                     for (id, output) in outputs.iter() {
                         let pyo3_tx = PyOutput::from(output);
                         py_senders
-                            .set_item(PyString::new(py, &id), &pyo3_tx.into_py(py))
+                            .set_item(PyString::new(py, id), &pyo3_tx.into_py(py))
                             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
                     }
 
@@ -100,7 +104,7 @@ impl SourceFactoryTrait for PySourceFactory {
                         .unwrap();
                     let event_loop_hdl = Arc::new(PyObject::from(event_loop));
                     let py_ctx =
-                        context_into_py(&py, context).map_err(|e| from_pyerr_to_zferr(e, &py))?;
+                        context_into_py(&py, &context).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                     // Initialize Python Object
                     let py_source: PyObject = source_class
@@ -115,33 +119,23 @@ impl SourceFactoryTrait for PySourceFactory {
                         asyncio_module: Arc::new(PyObject::from(asyncio)),
                     };
 
-                    // Callback setup
-                    let callback_hashmap = get_python_output_callbacks(&py, py_ctx, outputs)?;
-
-                    for (output, callback) in callback_hashmap.into_iter() {
-                        context.register_output_callback(output, callback)
-                    }
-
                     Ok(py_state)
                 }
                 None => Err(zferror!(ErrorKind::InvalidState)),
             }
         })?);
 
-        Ok(Some(Arc::new(PySource(my_state))))
+        Ok(Self { _lib: lib, state })
     }
 }
-
-#[derive(Debug)]
-struct PySource(Arc<PythonState>);
 
 #[async_trait]
 impl Node for PySource {
     async fn iteration(&self) -> Result<()> {
         Python::with_gil(|py| {
-            let source_class = self.0.py_state.cast_as::<PyAny>(py)?;
+            let source_class = self.state.py_state.cast_as::<PyAny>(py)?;
 
-            let event_loop = self.0.event_loop.cast_as::<PyAny>(py)?;
+            let event_loop = self.state.event_loop.cast_as::<PyAny>(py)?;
 
             let task_locals = TaskLocals::new(event_loop);
 
@@ -173,11 +167,4 @@ fn load_self() -> Result<Library> {
 
 fn read_file(path: &Path) -> Result<String> {
     Ok(fs::read_to_string(path)?)
-}
-
-zenoh_flow::export_source_factory!(register);
-fn register() -> Result<Arc<dyn SourceFactoryTrait>> {
-    let library = load_self()?;
-
-    Ok(Arc::new(PySourceFactory(library)) as Arc<dyn SourceFactoryTrait>)
 }

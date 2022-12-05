@@ -29,13 +29,11 @@ class MySink(Sink):
         configuration: Dict[str, Any],
         inputs: Dict[str, Input],
     ):
-        context.register_input_callback(inputs.get("Value", None), self.on_receive)
-
-    def on_receive(self, data_msg):
-        print(f"Received {int_from_bytes(data_msg.data)}")
+        self.input = inputs.get("Value", None)
 
     async def iteration(self) -> None:
-        await asyncio.sleep(10)
+        data_msg = await self.input.recv()
+        print(f"Received {int_from_bytes(data_msg.data)}")
 
 
 def int_from_bytes(xbytes: bytes) -> int:

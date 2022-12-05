@@ -21,10 +21,9 @@ use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
 use zenoh_flow_python_common::{
-    configuration_into_py, get_python_output_callbacks, Input as PyInput, Output as PyOutput,
+    configuration_into_py, context_into_py, from_pyerr_to_zferr, Input as PyInput,
+    Output as PyOutput, PythonState,
 };
-use zenoh_flow_python_common::{context_into_py, from_pyerr_to_zferr};
-use zenoh_flow_python_common::{get_python_input_callbacks, PythonState};
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -37,18 +36,26 @@ static LOAD_FLAGS: std::os::raw::c_int =
 
 pub static PY_LIB: &str = env!("PY_LIB");
 
-struct PyOperatorFactory(Library);
+#[export_operator]
+#[derive(Clone)]
+struct PyOperator {
+    state: Arc<PythonState>,
+    _lib: Arc<Library>,
+}
 
 #[async_trait]
-impl OperatorFactoryTrait for PyOperatorFactory {
-    async fn new_operator(
-        &self,
-        ctx: &mut Context,
-        configuration: &Option<Configuration>,
+impl Operator for PyOperator {
+    async fn new(
+        ctx: Context,
+        configuration: Option<Configuration>,
         inputs: Inputs,
         outputs: Outputs,
-    ) -> Result<Option<Arc<dyn Node>>> {
-        let my_state = Arc::new(Python::with_gil(|py| {
+    ) -> Result<Self> {
+        let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
+
+        pyo3::prepare_freethreaded_python();
+
+        let state = Arc::new(Python::with_gil(|py| {
             match configuration {
                 Some(configuration) => {
                     // Unwrapping configuration
@@ -81,7 +88,7 @@ impl OperatorFactoryTrait for PyOperatorFactory {
                     for (id, input) in inputs.iter() {
                         let pyo3_rx = PyInput::from(input);
                         py_receivers
-                            .set_item(PyString::new(py, &id), &pyo3_rx.into_py(py))
+                            .set_item(PyString::new(py, id), &pyo3_rx.into_py(py))
                             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
                     }
 
@@ -90,7 +97,7 @@ impl OperatorFactoryTrait for PyOperatorFactory {
                     for (id, output) in outputs.iter() {
                         let pyo3_tx = PyOutput::from(output);
                         py_senders
-                            .set_item(PyString::new(py, &id), &pyo3_tx.into_py(py))
+                            .set_item(PyString::new(py, id), &pyo3_tx.into_py(py))
                             .map_err(|e| from_pyerr_to_zferr(e, &py))?;
                     }
 
@@ -104,7 +111,7 @@ impl OperatorFactoryTrait for PyOperatorFactory {
                     let event_loop_hdl = Arc::new(PyObject::from(event_loop));
                     let asyncio_module = Arc::new(PyObject::from(asyncio));
                     let py_ctx =
-                        context_into_py(&py, ctx).map_err(|e| from_pyerr_to_zferr(e, &py))?;
+                        context_into_py(&py, &ctx).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                     // Initialize Python Object
                     let py_op: PyObject = op_class
@@ -119,39 +126,23 @@ impl OperatorFactoryTrait for PyOperatorFactory {
                         asyncio_module,
                     };
 
-                    // Callback setup
-                    let input_callback_hashmap = get_python_input_callbacks(&py, py_ctx, inputs)?;
-
-                    for (input, callback) in input_callback_hashmap.into_iter() {
-                        ctx.register_input_callback(input, callback)
-                    }
-
-                    let output_callback_hashmap =
-                        get_python_output_callbacks(&py, py_ctx, outputs)?;
-
-                    for (output, callback) in output_callback_hashmap.into_iter() {
-                        ctx.register_output_callback(output, callback)
-                    }
-
                     Ok(py_state)
                 }
                 None => Err(zferror!(ErrorKind::InvalidState)),
             }
         })?);
 
-        Ok(Some(Arc::new(PyOperator(my_state))))
+        Ok(Self { _lib: lib, state })
     }
 }
-
-struct PyOperator(Arc<PythonState>);
 
 #[async_trait]
 impl Node for PyOperator {
     async fn iteration(&self) -> Result<()> {
         Python::with_gil(|py| {
-            let op_class = self.0.py_state.cast_as::<PyAny>(py)?;
+            let op_class = self.state.py_state.cast_as::<PyAny>(py)?;
 
-            let event_loop = self.0.event_loop.cast_as::<PyAny>(py)?;
+            let event_loop = self.state.event_loop.cast_as::<PyAny>(py)?;
 
             let task_locals = TaskLocals::new(event_loop);
 
@@ -164,8 +155,6 @@ impl Node for PyOperator {
         Ok(())
     }
 }
-
-export_operator_factory!(register);
 
 fn load_self() -> Result<Library> {
     log::trace!("Python Operator Wrapper loading Python {}", PY_LIB);
@@ -180,12 +169,6 @@ fn load_self() -> Result<Library> {
 
         Ok(lib)
     }
-}
-
-fn register() -> Result<Arc<dyn OperatorFactoryTrait>> {
-    let library = load_self()?;
-
-    Ok(Arc::new(PyOperatorFactory(library)) as Arc<dyn OperatorFactoryTrait>)
 }
 
 fn read_file(path: &Path) -> Result<String> {

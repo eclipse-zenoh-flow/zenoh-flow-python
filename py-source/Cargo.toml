@@ -25,7 +25,7 @@ log = "0.4"
 pyo3 = "0.16"
 pyo3-asyncio = { version = "0.16", features = ["attributes", "async-std-runtime"] }
 
-zenoh-flow = { git = "https://github.com/ZettaScaleLabs/zenoh-flow.git", branch = "dev/v0.4.0" }
+zenoh-flow = "0.4.0"
 zenoh-flow-python-common = { path = "../zenoh-flow-python-common/" }
 
 [build-dependencies]
