@@ -35,4 +35,4 @@ panic = "abort"
 
 
 [patch.crates-io]
-zenoh-flow = { git = "https://github.com/ZettaScaleLabs/zenoh-flow.git", branch = "feat/separate-node-traits"}
+zenoh-flow = { git = "https://github.com/ZettaScaleLabs/zenoh-flow.git", branch = "v0.4.0"}
