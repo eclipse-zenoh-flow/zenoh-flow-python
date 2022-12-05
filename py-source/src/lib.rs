@@ -20,9 +20,9 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
-use zenoh_flow_python_common::{configuration_into_py, context_into_py};
-use zenoh_flow_python_common::{from_pyerr_to_zferr, get_python_output_callbacks};
-use zenoh_flow_python_common::{Output as PyOutput, PythonState};
+use zenoh_flow_python_common::{
+    configuration_into_py, context_into_py, from_pyerr_to_zferr, Output as PyOutput, PythonState,
+};
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -35,6 +35,7 @@ static LOAD_FLAGS: std::os::raw::c_int =
 
 pub static PY_LIB: &str = env!("PY_LIB");
 
+#[export_source]
 struct PySource {
     state: Arc<PythonState>,
     _lib: Arc<Library>,
@@ -42,11 +43,11 @@ struct PySource {
 
 #[async_trait]
 impl Source for PySource {
-    fn new(
-        context: &mut Context,
-        configuration: &Option<Configuration>,
+    async fn new(
+        context: Context,
+        configuration: Option<Configuration>,
         outputs: Outputs,
-    ) -> Result<Option<Self>> {
+    ) -> Result<Self> {
         let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
 
         pyo3::prepare_freethreaded_python();
@@ -103,7 +104,7 @@ impl Source for PySource {
                         .unwrap();
                     let event_loop_hdl = Arc::new(PyObject::from(event_loop));
                     let py_ctx =
-                        context_into_py(&py, context).map_err(|e| from_pyerr_to_zferr(e, &py))?;
+                        context_into_py(&py, &context).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                     // Initialize Python Object
                     let py_source: PyObject = source_class
@@ -118,22 +119,18 @@ impl Source for PySource {
                         asyncio_module: Arc::new(PyObject::from(asyncio)),
                     };
 
-                    // Callback setup
-                    let callback_hashmap = get_python_output_callbacks(&py, py_ctx, outputs)?;
-
-                    for (output, callback) in callback_hashmap.into_iter() {
-                        context.register_output_callback(output, callback)
-                    }
-
                     Ok(py_state)
                 }
                 None => Err(zferror!(ErrorKind::InvalidState)),
             }
         })?);
 
-        Ok(Some(Self { _lib: lib, state }))
+        Ok(Self { _lib: lib, state })
     }
+}
 
+#[async_trait]
+impl Node for PySource {
     async fn iteration(&self) -> Result<()> {
         Python::with_gil(|py| {
             let source_class = self.state.py_state.cast_as::<PyAny>(py)?;
@@ -171,5 +168,3 @@ fn load_self() -> Result<Library> {
 fn read_file(path: &Path) -> Result<String> {
     Ok(fs::read_to_string(path)?)
 }
-
-export_source!(PySource);

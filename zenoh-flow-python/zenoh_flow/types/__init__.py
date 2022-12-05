@@ -42,62 +42,6 @@ class Context(object):
         self.instance_uuid = instance_uuid
         """UUID of the flow instance the node is associated."""
 
-        self.input_callbacks = {}
-        self.output_callbacks = {}
-
-    def register_input_callback(
-        self,
-        input_recv: Input,
-        cb: Callable[[DataMessage], None]
-    ) -> None:
-        """
-        Registers an *synchronous* callback for the given input.
-
-        :param input_recv: DataReceiver associated to the input.
-        :type input_recv: DataReceiver
-        :param cb: Callback
-        :type cb: Callable[[DataMessage], None]
-
-        :rtype: None
-
-        .. warning::
-            Once a callback is registered on an input,  that input
-            **MUST NOT** be used in the `iteration` function
-            or elsewhere in the code.
-            The input ownership is given back to Zenoh Flow, thus reusing it
-            is undefined behavior.
-
-        """
-        self.input_callbacks[input_recv.port_id()] = cb
-
-    def register_output_callback(
-        self,
-        output_sender: Output,
-        cb: Callable[[], bytes],
-        timeout_ms: int,
-    ) -> None:
-        """
-        Registers an *synchronous* callback for the given output.
-
-        :param output_sender: DataSender associated to the output.
-        :type output_sender: DataSender
-        :param cb: Callback
-        :type cb: Callable[[], bytes]
-        :param timeout_ms: Timeout in ms used to trig
-        :type timeout_ms: int
-
-        :rtype: None
-
-        .. warning::
-            Once a callback is registered on an output, that output
-            **MUST NOT** be used in the `iteration`
-            function or elsewhere in the code.
-            The output ownership is given back to Zenoh Flow, thus using it
-            is undefined behavior.
-
-        """
-        self.output_callbacks[output_sender.port_id()] = (cb, timeout_ms)
-
     def __repr__(self):
         return self.__str__()
 

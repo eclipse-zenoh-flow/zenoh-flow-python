@@ -21,10 +21,9 @@ use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
 use zenoh_flow_python_common::{
-    configuration_into_py, get_python_output_callbacks, Input as PyInput, Output as PyOutput,
+    configuration_into_py, context_into_py, from_pyerr_to_zferr, Input as PyInput,
+    Output as PyOutput, PythonState,
 };
-use zenoh_flow_python_common::{context_into_py, from_pyerr_to_zferr};
-use zenoh_flow_python_common::{get_python_input_callbacks, PythonState};
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -37,6 +36,7 @@ static LOAD_FLAGS: std::os::raw::c_int =
 
 pub static PY_LIB: &str = env!("PY_LIB");
 
+#[export_operator]
 #[derive(Clone)]
 struct PyOperator {
     state: Arc<PythonState>,
@@ -45,12 +45,12 @@ struct PyOperator {
 
 #[async_trait]
 impl Operator for PyOperator {
-    fn new(
-        ctx: &mut Context,
-        configuration: &Option<Configuration>,
+    async fn new(
+        ctx: Context,
+        configuration: Option<Configuration>,
         inputs: Inputs,
         outputs: Outputs,
-    ) -> Result<Option<Self>> {
+    ) -> Result<Self> {
         let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
 
         pyo3::prepare_freethreaded_python();
@@ -111,7 +111,7 @@ impl Operator for PyOperator {
                     let event_loop_hdl = Arc::new(PyObject::from(event_loop));
                     let asyncio_module = Arc::new(PyObject::from(asyncio));
                     let py_ctx =
-                        context_into_py(&py, ctx).map_err(|e| from_pyerr_to_zferr(e, &py))?;
+                        context_into_py(&py, &ctx).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                     // Initialize Python Object
                     let py_op: PyObject = op_class
@@ -126,29 +126,18 @@ impl Operator for PyOperator {
                         asyncio_module,
                     };
 
-                    // Callback setup
-                    let input_callback_hashmap = get_python_input_callbacks(&py, py_ctx, inputs)?;
-
-                    for (input, callback) in input_callback_hashmap.into_iter() {
-                        ctx.register_input_callback(input, callback)
-                    }
-
-                    let output_callback_hashmap =
-                        get_python_output_callbacks(&py, py_ctx, outputs)?;
-
-                    for (output, callback) in output_callback_hashmap.into_iter() {
-                        ctx.register_output_callback(output, callback)
-                    }
-
                     Ok(py_state)
                 }
                 None => Err(zferror!(ErrorKind::InvalidState)),
             }
         })?);
 
-        Ok(Some(Self { _lib: lib, state }))
+        Ok(Self { _lib: lib, state })
     }
+}
 
+#[async_trait]
+impl Node for PyOperator {
     async fn iteration(&self) -> Result<()> {
         Python::with_gil(|py| {
             let op_class = self.state.py_state.cast_as::<PyAny>(py)?;
@@ -166,8 +155,6 @@ impl Operator for PyOperator {
         Ok(())
     }
 }
-
-export_operator!(PyOperator);
 
 fn load_self() -> Result<Library> {
     log::trace!("Python Operator Wrapper loading Python {}", PY_LIB);

@@ -30,8 +30,3 @@ zenoh-flow = "0.4.0"
 [features]
 abi-py37 = ["pyo3/abi3-py37"]
 default = ["abi-py37"]
-
-#[lib]
-#name = "zenoh_flow_python_common"
-#crate-type=["dylib"]
-#path="src/lib.rs"

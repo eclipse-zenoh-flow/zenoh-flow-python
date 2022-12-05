@@ -29,10 +29,7 @@ class MySrc(Source):
     ):
         configuration = {} if configuration is None else configuration
         self.value = int(configuration.get("value", 0))
-        context.register_output_callback(
-            outputs.get("Value", None), self.produce_data, 500
-        )
-        # self.output = outputs.get("Value", None)
+        self.output = outputs.get("Value", None)
 
     def finalize(self) -> None:
         return None
@@ -43,7 +40,9 @@ class MySrc(Source):
         return int_to_bytes(self.value)
 
     async def iteration(self) -> None:
-        await asyncio.sleep(10)
+        await asyncio.sleep(0.5)
+        await self.output.send(self.produce_data())
+        return None
 
 
 def int_to_bytes(x: int) -> bytes:

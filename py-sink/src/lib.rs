@@ -20,9 +20,9 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
-use zenoh_flow_python_common::{configuration_into_py, Input as PyInput};
-use zenoh_flow_python_common::{context_into_py, from_pyerr_to_zferr};
-use zenoh_flow_python_common::{get_python_input_callbacks, PythonState};
+use zenoh_flow_python_common::{
+    configuration_into_py, context_into_py, from_pyerr_to_zferr, Input as PyInput, PythonState,
+};
 
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
@@ -35,6 +35,7 @@ static LOAD_FLAGS: std::os::raw::c_int =
 
 pub static PY_LIB: &str = env!("PY_LIB");
 
+#[export_sink]
 #[derive(Debug)]
 struct PySink {
     state: Arc<PythonState>,
@@ -43,11 +44,11 @@ struct PySink {
 
 #[async_trait]
 impl Sink for PySink {
-    fn new(
-        ctx: &mut Context,
-        configuration: &Option<Configuration>,
+    async fn new(
+        ctx: Context,
+        configuration: Option<Configuration>,
         inputs: Inputs,
-    ) -> Result<Option<Self>> {
+    ) -> Result<Self> {
         let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
 
         pyo3::prepare_freethreaded_python();
@@ -100,7 +101,7 @@ impl Sink for PySink {
                         .unwrap();
                     let event_loop_hdl = Arc::new(PyObject::from(event_loop));
                     let py_ctx =
-                        context_into_py(&py, ctx).map_err(|e| from_pyerr_to_zferr(e, &py))?;
+                        context_into_py(&py, &ctx).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                     // Initialize Python Object
                     let py_sink: PyObject = sink_class
@@ -115,22 +116,18 @@ impl Sink for PySink {
                         asyncio_module: Arc::new(PyObject::from(asyncio)),
                     };
 
-                    // Callback setup
-                    let callback_hashmap = get_python_input_callbacks(&py, py_ctx, inputs)?;
-
-                    for (input, callback) in callback_hashmap.into_iter() {
-                        ctx.register_input_callback(input, callback)
-                    }
-
                     Ok(py_state)
                 }
                 None => Err(zferror!(ErrorKind::InvalidState)),
             }
         })?);
 
-        Ok(Some(Self { _lib: lib, state }))
+        Ok(Self { _lib: lib, state })
     }
+}
 
+#[async_trait]
+impl Node for PySink {
     async fn iteration(&self) -> Result<()> {
         Python::with_gil(|py| {
             let sink_class = self.state.py_state.cast_as::<PyAny>(py)?;
@@ -148,8 +145,6 @@ impl Sink for PySink {
         Ok(())
     }
 }
-
-export_sink!(PySink);
 
 fn load_self() -> Result<Library> {
     log::trace!("Python Sink Wrapper loading Python {}", PY_LIB);
