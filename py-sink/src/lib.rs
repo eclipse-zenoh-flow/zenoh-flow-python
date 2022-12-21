@@ -47,7 +47,7 @@ impl Sink for PySink {
     async fn new(
         ctx: Context,
         configuration: Option<Configuration>,
-        inputs: Inputs,
+        mut inputs: Inputs,
     ) -> Result<Self> {
         let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
 
@@ -85,7 +85,11 @@ impl Sink for PySink {
 
                     let py_receivers = PyDict::new(py);
 
-                    for (id, input) in inputs.iter() {
+                    let inputs_ids = inputs.keys().cloned().collect::<Vec<_>>();
+                    for id in &inputs_ids {
+                        let input = inputs
+                            .take_raw(id)
+                            .ok_or_else(|| zferror!(ErrorKind::MissingInput(id.to_string())))?;
                         let pyo3_rx = PyInput::from(input);
                         py_receivers
                             .set_item(PyString::new(py, id), &pyo3_rx.into_py(py))

@@ -46,7 +46,7 @@ impl Source for PySource {
     async fn new(
         context: Context,
         configuration: Option<Configuration>,
-        outputs: Outputs,
+        mut outputs: Outputs,
     ) -> Result<Self> {
         let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
 
@@ -88,7 +88,11 @@ impl Source for PySource {
 
                     let py_senders = PyDict::new(py);
 
-                    for (id, output) in outputs.iter() {
+                    let outputs_ids = outputs.keys().cloned().collect::<Vec<_>>();
+                    for id in &outputs_ids {
+                        let output = outputs
+                            .take_raw(id)
+                            .ok_or_else(|| zferror!(ErrorKind::MissingOutput(id.to_string())))?;
                         let pyo3_tx = PyOutput::from(output);
                         py_senders
                             .set_item(PyString::new(py, id), &pyo3_tx.into_py(py))

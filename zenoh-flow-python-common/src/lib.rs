@@ -23,9 +23,10 @@ use std::convert::{TryFrom, TryInto};
 use zenoh_flow::bail;
 
 use zenoh_flow::prelude::{
-    zferror, Configuration, Context as ZFContext, Data, Error, ErrorKind, Input as ZInput,
-    Message as ZFMessage, Output as ZOutput,
+    zferror, Configuration, Context as ZFContext, Error, ErrorKind, InputRaw as ZInput,
+    OutputRaw as ZOutput, Payload,
 };
+use zenoh_flow::types::LinkMessage as ZFMessage;
 
 use std::sync::Arc;
 
@@ -168,10 +169,10 @@ impl Output {
         ts: Option<u64>,
     ) -> PyResult<&'p PyAny> {
         let c_sender = self.sender.clone();
-        let rust_data = Data::from(data.as_bytes());
+        let rust_data = Payload::from(data.as_bytes());
         pyo3_asyncio::async_std::future_into_py(py, async move {
             c_sender
-                .send_async(rust_data, ts)
+                .send(rust_data, ts)
                 .await
                 .map_err(|_| PyValueError::new_err("Unable to send data"))?;
             Ok(Python::with_gil(|py| py.None()))
@@ -217,7 +218,7 @@ impl Input {
         let c_receiver = self.receiver.clone();
         pyo3_asyncio::async_std::future_into_py(py, async move {
             let rust_msg = c_receiver
-                .recv_async()
+                .recv()
                 .await
                 .map_err(|_| PyValueError::new_err("Unable to receive data"))?;
             DataMessage::try_from(rust_msg)
@@ -352,9 +353,6 @@ impl TryFrom<ZFMessage> for DataMessage {
                     is_watermark: true,
                 })
             }
-            _ => Err(PyValueError::new_err(
-                "Cannot convert ControlMessage to DataMessage",
-            )),
         }
     }
 }

@@ -48,8 +48,8 @@ impl Operator for PyOperator {
     async fn new(
         ctx: Context,
         configuration: Option<Configuration>,
-        inputs: Inputs,
-        outputs: Outputs,
+        mut inputs: Inputs,
+        mut outputs: Outputs,
     ) -> Result<Self> {
         let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
 
@@ -85,7 +85,11 @@ impl Operator for PyOperator {
 
                     let py_receivers = PyDict::new(py);
 
-                    for (id, input) in inputs.iter() {
+                    let inputs_ids = inputs.keys().cloned().collect::<Vec<_>>();
+                    for id in &inputs_ids {
+                        let input = inputs
+                            .take_raw(id)
+                            .ok_or_else(|| zferror!(ErrorKind::MissingInput(id.to_string())))?;
                         let pyo3_rx = PyInput::from(input);
                         py_receivers
                             .set_item(PyString::new(py, id), &pyo3_rx.into_py(py))
@@ -94,7 +98,11 @@ impl Operator for PyOperator {
 
                     let py_senders = PyDict::new(py);
 
-                    for (id, output) in outputs.iter() {
+                    let outputs_ids = outputs.keys().cloned().collect::<Vec<_>>();
+                    for id in &outputs_ids {
+                        let output = outputs
+                            .take_raw(id)
+                            .ok_or_else(|| zferror!(ErrorKind::MissingOutput(id.to_string())))?;
                         let pyo3_tx = PyOutput::from(output);
                         py_senders
                             .set_item(PyString::new(py, id), &pyo3_tx.into_py(py))
