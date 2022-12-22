@@ -36,6 +36,17 @@ jobs:
           override: true
           components: rustfmt, clippy
 
+      - name: Clippy check
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all-targets -- -D warnings
+
+      - name: Run rustfmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
 
       - name: Build Wrappers
         uses: actions-rs/cargo@v1
@@ -47,17 +58,6 @@ jobs:
         uses: messense/maturin-action@v1
         with:
           args: --release -m zenoh-flow-python/Cargo.toml
-
-      - name: Clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-
-      - name: Run rustfmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -- --check
 
       - name: Install zenoh-flow-python
         run: pip3 install ./target/wheels/*.whl

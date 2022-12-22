@@ -15,8 +15,14 @@
 [package]
 name = "py-sink"
 version = "0.4.0"
+authors = ["ZettaScale Zenoh Team <zenoh@zettascale.tech>"]
+categories = ["network-programming"]
+description = "Zenoh-Flow Python Sink wrapper"
 edition = "2018"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+homepage = "https://github.com/ZettaScaleLabs/zenoh-flow-python"
+license = " EPL-2.0 OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/ZettaScaleLabs/zenoh-flow-python"
 
 [dependencies]
 async-trait = "0.1"
@@ -26,7 +32,7 @@ pyo3 = "0.16"
 pyo3-asyncio = { version = "0.16", features = ["attributes", "async-std-runtime"] }
 
 zenoh-flow = "0.4.0"
-zenoh-flow-python-common = { path = "../zenoh-flow-python-common/" }
+zenoh-flow-python-commons = { version = "0.4.0", path = "../zenoh-flow-python-commons/" }
 
 [build-dependencies]
 pyo3-build-config = { version = "0.16", features = ["resolve-config"] }

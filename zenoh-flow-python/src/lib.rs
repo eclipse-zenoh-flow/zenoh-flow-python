@@ -13,7 +13,7 @@
 //
 
 use pyo3::prelude::*;
-use zenoh_flow_python_common::{DataMessage, Input, Output};
+use zenoh_flow_python_commons::{DataMessage, Input, Output};
 
 #[pymodule]
 fn zenoh_flow(_py: Python, m: &PyModule) -> PyResult<()> {

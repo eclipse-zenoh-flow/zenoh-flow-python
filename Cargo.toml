@@ -19,7 +19,7 @@ members = [
   "py-sink",
   "py-source",
   "zenoh-flow-python",
-  "zenoh-flow-python-common",
+  "zenoh-flow-python-commons",
 ]
 
 [profile.dev]

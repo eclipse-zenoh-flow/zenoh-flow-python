@@ -20,7 +20,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
-use zenoh_flow_python_common::{
+use zenoh_flow_python_commons::{
     configuration_into_py, context_into_py, from_pyerr_to_zferr, Input as PyInput, PythonState,
 };
 

@@ -42,6 +42,6 @@ zip_safe = false
 version = "0.4.0"
 
 [project.urls]
-"Bug Tracker" = "https://github.com/eclipse-zenoh/zenoh-flow/issues"
-"Source Code" = "https://github.com/eclipse-zenoh/zenoh-flow"
+"Bug Tracker" = "https://github.com/ZettaScaleLabs/zenoh-flow-python/issues"
+"Source Code" = "https://github.com/ZettaScaleLabs/zenoh-flow-python"
 "Documentation" = "https://readthedocs.org/projects/zenoh-flow/"
