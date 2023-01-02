@@ -17,8 +17,8 @@
 The Zenoh Flow Python API.
 
 
-The *zenoh-flow-python* library provides a set of Python interfaces to write your
-operators, source and sink for Zenoh Flow.
+The *zenoh-flow-python* library provides a set of Python interfaces to write
+your operators, source and sink for Zenoh Flow.
 
 This API it's NOT meant to be used directly, instead your operators, sink
 and sources have to implement the methods provided by th classes.
@@ -33,6 +33,13 @@ and returns the node.
         return MyGraphNode
 
 Each .py file is accompanied by a YAML file describing the node.
+
+The Zenoh Flow installation guide is provided as part of the Wiki:
+https://github.com/eclipse-zenoh/zenoh-flow/wiki/Installation-(v0.4.0)
+
+Getting started is available here:
+https://github.com/eclipse-zenoh/zenoh-flow/wiki/Getting-started-(v0.4.0)
+
 
 
 Below some examples for simple source, sink and operator.

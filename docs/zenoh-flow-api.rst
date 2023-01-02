@@ -15,14 +15,14 @@
 Zenoh Flow API Reference
 ========================
 
-DataSender
+Output
 ----------
-.. autoclass:: zenoh_flow.DataSender
+.. autoclass:: zenoh_flow.Output
     :members:
 
-DataReceiver
+Input
 ------------
-.. autoclass:: zenoh_flow.DataReceiver
+.. autoclass:: zenoh_flow.Input
     :members:
 
 DataMessage

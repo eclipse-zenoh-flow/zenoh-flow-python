@@ -20,6 +20,9 @@ from typing import Dict, Any
 class Operator(object):
     """
     The class representing a Zenoh Flow operator.
+    More information about Zenoh Flow operators can be found here:
+    https://github.com/eclipse-zenoh/zenoh-flow/wiki/Operator-%28v0.4.0%29
+
 
     The `__init__` method is called by the zenoh flow runtime.
 

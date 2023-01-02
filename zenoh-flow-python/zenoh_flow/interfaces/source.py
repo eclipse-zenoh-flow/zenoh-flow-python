@@ -22,6 +22,9 @@ class Source(object):
     """
     The class representing a Zenoh Flow source.
 
+    More information about Zenoh Flow operators can be found here:
+    https://github.com/eclipse-zenoh/zenoh-flow/wiki/Source-%28v0.4.0%29
+
     The `__init__` method is called by the zenoh flow runtime.
 
     It takes the following parameters:
