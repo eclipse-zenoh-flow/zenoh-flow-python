@@ -73,12 +73,12 @@ The docs will be available under `_build/html/index.html`.
 
 ### Run an example
 
-Clone and build the [Zenoh Flow runtime](https://github.com/atolab/zenoh-flow-examples), and then use the provided `py-pipeline.yml` example to run it.
+Clone, build and install [Zenoh Flow](https://github.com/zenoh/zenoh-flow), and then use the provided `py-pipeline.yml` example to run it.
 
-You may need to update the paths in `py-pipeline.yml` file.
+:bulb: Note that you actually only need to update the paths in `py-pipeline.yml` file.
 
 ```bash
-$ ../zenoh-flow-examples/target/release/runtime -r foo -g py-pipeline.yml -l loader-config.yml
+$ zfctl launch py-pipeline.yml
 ```
 
 

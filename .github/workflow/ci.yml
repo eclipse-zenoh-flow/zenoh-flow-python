@@ -30,10 +30,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          override: true
           components: rustfmt, clippy
 
       - name: Clippy check
@@ -52,7 +51,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release -p py-source -p py-sink -p py-op
+          args: --release -p zenoh-flow-python-source-wrapper -p zenoh-flow-python-sink-wrapper -p zenoh-flow-python-operator-wrapper
 
       - name: Build zenoh-flow-python
         uses: messense/maturin-action@v1
