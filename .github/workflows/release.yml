@@ -217,36 +217,35 @@ jobs:
           # - { target: x86_64-pc-windows-msvc, arch: win64, os: windows-2019 }
           # - { target: x86_64-pc-windows-gnu         , arch: win64 , os: windows-2019                  }
     steps:
-      - name: Trust this directory
-        run: git config --global --add safe.directory /__w/zenoh-flow/zenoh-flow
-      - name: Checkout source code
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 500 # NOTE: get long history for git-version crate to correctly compute a version
-      - name: Fetch Git tags # NOTE: workaround for https://github.com/actions/checkout/issues/290
-        shell: bash
-        run: git fetch --tags --force
+      - uses: actions/checkout@v2
       - name: Install prerequisites
         shell: bash
         run: |
           case ${{ matrix.job.target }} in
-            *-linux-gnu*) cargo install cargo-deb ;;
+            *-linux-gnu*)
+              cargo install cargo-deb
+              sudo apt-get install libpython3-dev
+              ;;
           esac
           case ${{ matrix.job.target }} in
             arm-unknown-linux-gnueabi)
+              sudo dpkg --add-architecture armhf
               sudo apt-get -y update
-              sudo apt-get -y install gcc-arm-linux-gnueabi libssl-dev
+              sudo apt-get -y install gcc-arm-linux-gnueabi libssl-dev libpython3-dev:armhf
               ;;
             arm*-unknown-linux-gnueabihf)
+              sudo dpkg --add-architecture armhf
               sudo apt-get -y update
-              sudo apt-get -y install gcc-arm-linux-gnueabihf libssl-dev
+              sudo apt-get -y install gcc-arm-linux-gnueabihf libssl-dev libpython3-dev:armhf
               ;;
             aarch64-unknown-linux-gnu)
+              sudo dpkg --add-architecture arm64
               sudo apt-get -y update
-              sudo apt-get -y install gcc-aarch64-linux-gnu libssl-dev
+              sudo apt-get -y install gcc-aarch64-linux-gnu libssl-dev libpython3-dev:arm64
               ;;
           esac
-      - name: Set up Python  3.7
+      - name: Set up Python 3.7
+        if: ${{ matrix.job.target }} == 'x86_64-apple-darwin'
         uses: actions/setup-python@v2
         with:
           python-version:  "3.7"
