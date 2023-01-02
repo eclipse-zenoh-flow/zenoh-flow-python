@@ -31,9 +31,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: actions-rs/toolchain@v1
         with:
-          components: rustfmt, clippy
+          toolchain: stable
+          profile: minimal
+          default: true
 
       - name: Clippy check
         uses: actions-rs/cargo@v1
