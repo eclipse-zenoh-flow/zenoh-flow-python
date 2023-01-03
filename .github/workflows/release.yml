@@ -260,21 +260,21 @@ jobs:
           args: --release -p zenoh-flow-python-source-wrapper -p zenoh-flow-python-sink-wrapper -p zenoh-flow-python-operator-wrapper --target=${{ matrix.job.target }} --all-targets
 
       - name: Debian package - zenoh-flow-python-source-wrapper
-        if: ${{ matrix.job.target }} != 'x86_64-apple-darwin'
+        if: runner.os == 'Linux'
         uses: actions-rs/cargo@v1
         with:
           command: deb
           args: --no-build -p zenoh-flow-python-source-wrapper --target=${{ matrix.job.target }}
 
       - name: Debian package - zenoh-flow-python-sink-wrapper
-        if: ${{ matrix.job.target }} != 'x86_64-apple-darwin'
+        if: runner.os == 'Linux'
         uses: actions-rs/cargo@v1
         with:
           command: deb
           args: --no-build -p zenoh-flow-python-sink-wrapper --target=${{ matrix.job.target }}
 
       - name: Debian package - zenoh-flow-python-operator-wrapper
-        if: ${{ matrix.job.target }} != 'x86_64-apple-darwin'
+        if: runner.os == 'Linux'
         uses: actions-rs/cargo@v1
         with:
           command: deb
