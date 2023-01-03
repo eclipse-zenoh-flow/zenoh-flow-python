@@ -125,23 +125,23 @@ jobs:
           name: wheels
           path: dists
 
-# deploy-wheels:
-#     needs: [macos-python, linux-python, linux-cross-python, linux-armv6-python]
-#     name: deploy wheels to pypi
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/download-artifact@v2
-#         with:
-#           name: wheels
-#           path: dist
-#       - name: Check dist
-#         run: ls -al ./dist/*
-#       - name: publish
-#         if: github.event_name == 'release' && github.event.action == 'published'
-#         uses: pypa/gh-action-pypi-publish@master
-#         with:
-#           user: __token__
-#           password: ${{ secrets.PYPI_API_TOKEN }}
+deploy-wheels:
+    needs: [macos-python, linux-python, linux-cross-python, linux-armv6-python]
+    name: deploy wheels to pypi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: wheels
+          path: dist
+      - name: Check dist
+        run: ls -al ./dist/*
+      - name: publish
+        if: github.event_name == 'release' && github.event.action == 'published'
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
 
 
   builds:
@@ -152,12 +152,12 @@ jobs:
       matrix:
         job:
           - { target: x86_64-unknown-linux-gnu, arch: amd64, os: ubuntu-20.04 }
-          - {
-              target: x86_64-unknown-linux-musl,
-              arch: amd64,
-              os: ubuntu-20.04,
-              use-cross: true,
-            }
+          # - {
+          #     target: x86_64-unknown-linux-musl,
+          #     arch: amd64,
+          #     os: ubuntu-20.04,
+          #     use-cross: true,
+          #   }
           # - {
           #     target: arm-unknown-linux-gnueabi,
           #     arch: armel,
@@ -183,12 +183,12 @@ jobs:
           #     use-cross: true,
           # }
           - { target: x86_64-unknown-linux-gnu, arch: amd64, os: ubuntu-18.04 }
-          - {
-              target: x86_64-unknown-linux-musl,
-              arch: amd64,
-              os: ubuntu-18.04,
-              use-cross: true,
-            }
+          # - {
+          #     target: x86_64-unknown-linux-musl,
+          #     arch: amd64,
+          #     os: ubuntu-18.04,
+          #     use-cross: true,
+          #   }
           # - {
           #     target: arm-unknown-linux-gnueabi,
           #     arch: armel,
@@ -227,21 +227,21 @@ jobs:
               sudo apt-get install libpython3-dev
               ;;
           esac
-          case ${{ matrix.job.target }} in
-            arm-unknown-linux-gnueabi)
-              sudo apt-get -y update
-              sudo apt-get -y install gcc-arm-linux-gnueabi libssl-dev
-              ;;
-            arm*-unknown-linux-gnueabihf)
-              sudo apt-get -y update
-              sudo apt-get -y install gcc-arm-linux-gnueabihf libssl-dev
-              ;;
-            aarch64-unknown-linux-gnu)
-              sudo dpkg --add-architecture arm64
-              sudo apt-get -y update
-              sudo apt-get -y install gcc-aarch64-linux-gnu libssl-dev
-              ;;
-          esac
+          # case ${{ matrix.job.target }} in
+          #   arm-unknown-linux-gnueabi)
+          #     sudo apt-get -y update
+          #     sudo apt-get -y install gcc-arm-linux-gnueabi libssl-dev
+          #     ;;
+          #   arm*-unknown-linux-gnueabihf)
+          #     sudo apt-get -y update
+          #     sudo apt-get -y install gcc-arm-linux-gnueabihf libssl-dev
+          #     ;;
+          #   aarch64-unknown-linux-gnu)
+          #     sudo dpkg --add-architecture arm64
+          #     sudo apt-get -y update
+          #     sudo apt-get -y install gcc-aarch64-linux-gnu libssl-dev
+          #     ;;
+          # esac
       - name: Set up Python 3.7
         if: ${{ matrix.job.target }} == 'x86_64-apple-darwin'
         uses: actions/setup-python@v2
@@ -259,23 +259,38 @@ jobs:
           command: build
           args: --release -p zenoh-flow-python-source-wrapper -p zenoh-flow-python-sink-wrapper -p zenoh-flow-python-operator-wrapper --target=${{ matrix.job.target }}
 
-      # - name: Debian package - zenoh-flow-python-source-wrapper
-      #     uses: actions-rs/cargo@v1
-      #     with:
-      #       command: deb
-      #       args: --no-build -pzenoh-flow-python-source-wrapper
+      - name: Debian package - zenoh-flow-python-source-wrapper
+        if: ${{ matrix.job.target }} != 'x86_64-apple-darwin'
+        uses: actions-rs/cargo@v1
+        with:
+          command: deb
+          args: --no-build -pzenoh-flow-python-source-wrapper
 
-      # - name: Debian package - zenoh-flow-python-sink-wrapper
-      #     uses: actions-rs/cargo@v1
-      #     with:
-      #       command: deb
-      #       args: --no-build -p zenoh-flow-python-sink-wrapper
+      - name: Debian package - zenoh-flow-python-sink-wrapper
+        if: ${{ matrix.job.target }} != 'x86_64-apple-darwin'
+        uses: actions-rs/cargo@v1
+        with:
+          command: deb
+          args: --no-build -p zenoh-flow-python-sink-wrapper
 
-      # - name: Debian package - zenoh-flow-python-operator-wrapper
-      #     uses: actions-rs/cargo@v1
-      #     with:
-      #       command: deb
-      #       args: --no-build -p zenoh-flow-python-operator-wrapper
+      - name: Debian package - zenoh-flow-python-operator-wrapper
+        if: ${{ matrix.job.target }} != 'x86_64-apple-darwin'
+        uses: actions-rs/cargo@v1
+        with:
+          command: deb
+          args: --no-build -p zenoh-flow-python-operator-wrapper
 
-
-
+  build-metapackage:
+    name: Build meta package
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install prerequisites
+      shell: bash
+      run: |
+        sudo apt update
+        sudo apt install equivs -y
+    - name: Build metapackage
+      shell: bash
+      run: |
+        equivs-build zenoh-flow-python-extension
