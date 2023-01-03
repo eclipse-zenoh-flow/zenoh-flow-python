@@ -39,7 +39,6 @@ classifiers = [
         "Operating System :: Microsoft :: Windows",
 ]
 zip_safe = false
-version = "0.4.0"
 
 [project.urls]
 "Bug Tracker" = "https://github.com/ZettaScaleLabs/zenoh-flow-python/issues"
