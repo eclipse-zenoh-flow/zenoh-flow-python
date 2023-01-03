@@ -269,7 +269,7 @@ jobs:
             *linux*)
               cd "target/${TARGET}/release/"
               echo "Packaging ${MAIN_PKG_NAME}:"
-              zip ${MAIN_PKG_NAME} zenohd libzenoh_flow_python_*_wrapper.so
+              zip ${MAIN_PKG_NAME} libzenoh_flow_python_*_wrapper.so
               cd -
               echo MAIN_PKG_NAME="${MAIN_PKG_NAME}" >> $GITHUB_OUTPUT
 
@@ -289,7 +289,7 @@ jobs:
             *apple*)
               cd "target/${TARGET}/release/"
               echo "Packaging ${MAIN_PKG_NAME}:"
-              zip ${MAIN_PKG_NAME} zenohd libzenoh_flow_python_*_wrapper.dylib
+              zip ${MAIN_PKG_NAME} libzenoh_flow_python_*_wrapper.dylib
               cd -
               echo MAIN_PKG_NAME="${MAIN_PKG_NAME}" >> $GITHUB_OUTPUT
               ;;
