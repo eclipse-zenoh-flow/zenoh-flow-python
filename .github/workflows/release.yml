@@ -7,7 +7,7 @@ on:
   release:
     types: [published]
   schedule:
-    - cron: "0 0 * * 1-5"
+    - cron: "0 1 * * 1-5"
   workflow_dispatch:
 
 jobs:
@@ -49,6 +49,12 @@ jobs:
             PKG_VERSION=${ZENOH_FLOW_VERSION}-${GITHUB_SHA:0:8}
           fi
           echo "PKG_VERSION=${PKG_VERSION}" >> $GITHUB_OUTPUT
+
+          echo "GIT_TAG=${GIT_TAG}"
+          echo "GIT_BRANCH=${GIT_BRANCH}"
+          echo "IS_RELEASE=${IS_RELEASE}"
+          echo "ZENOH_FLOW_VERSION=${ZENOH_FLOW_VERSION}"
+          echo "PKG_VERSION=${PKG_VERSION}"
     outputs:
       GIT_BRANCH: ${{ steps.env.outputs.GIT_BRANCH }}
       GIT_TAG: ${{ steps.env.outputs.GIT_TAG }}
@@ -183,16 +189,12 @@ jobs:
           path: dist
       - name: Check dist
         run: ls -al ./dist/*
-      - name: Publish to crates.io
+      - name: publish on pypi.org
         if: github.event_name == 'release' && github.event.action == 'published'
-        shell: bash
-        run: echo "This should publish on pypi.org"
-      # - name: publish
-      #   if: github.event_name == 'release' && github.event.action == 'published'
-      #   uses: pypa/gh-action-pypi-publish@master
-      #   with:
-      #     user: __token__
-      #     password: ${{ secrets.PYPI_API_TOKEN }}
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
 
 
   builds:
@@ -206,7 +208,7 @@ jobs:
           - { target: x86_64-unknown-linux-gnu, arch: amd64, os: ubuntu-22.04 }
           - { target: x86_64-unknown-linux-gnu, arch: amd64, os: ubuntu-20.04 }
           - { target: x86_64-unknown-linux-gnu, arch: amd64, os: ubuntu-18.04 }
-          - { target: x86_64-apple-darwin, arch: darwin, os: macos-10.15 }
+          - { target: x86_64-apple-darwin, arch: darwin, os: macos-latest }
     steps:
       - uses: actions/checkout@v2
       - name: Install prerequisites
@@ -284,8 +286,8 @@ jobs:
                 zip ${DEBS_PKG_NAME} *.deb
                 cd -
                 # checks if the meta package exists and adds it to the zip
-                if [[ -d zenoh-flow-python_*_all.deb ]]; then
-                  zip -ru ${DEBS_PKG_NAME} zenoh-flow-python_*_all.deb
+                if [[ -d zenoh-flow-python*.deb ]]; then
+                  zip -ru ${DEBS_PKG_NAME} zenoh-flow-python*.deb
                 fi
                 echo DEBS_PKG_NAME="${DEBS_PKG_NAME}" >> $GITHUB_OUTPUT
               fi
