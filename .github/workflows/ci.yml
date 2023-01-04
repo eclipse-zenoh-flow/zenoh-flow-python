@@ -5,11 +5,11 @@ name: CI
 
 on:
   push:
-    branches: ["master", "wip/0.4"]
+    branches: ["master"]
   pull_request:
-    branches: ["master", "wip/0.4"]
+    branches: ["master"]
   schedule:
-    - cron: "0 6 * * 1-5"
+    - cron: "0 0 * * 1-5"
   workflow_dispatch:
 
 jobs:
