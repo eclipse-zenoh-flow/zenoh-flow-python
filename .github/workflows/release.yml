@@ -188,7 +188,7 @@ jobs:
         shell: bash
         run: echo "This should publish on pypi.org"
       # - name: publish
-      #
+      #   if: github.event_name == 'release' && github.event.action == 'published'
       #   uses: pypa/gh-action-pypi-publish@master
       #   with:
       #     user: __token__
