@@ -1,31 +1,18 @@
-flow: RandomGeneration
+flow: PythonFlow
 operators:
   - id : PyOp
-    uri: file://./zenoh-flow-python/examples/operator.py
-    inputs:
-      - id: Data
-        type: usize
-    outputs:
-      - id: Data
-        type: usize
+    descriptor : file://./zenoh-flow-python/examples/py-operator.yml
 sources:
   - id : RandomGenerator
-    uri: file://./zenoh-flow-python/examples/source.py
-    configuration:
-      value: 0
-    output:
-        id: Random
-        type: usize
+    descriptor : file://./zenoh-flow-python/examples/py-source.yml
 sinks:
   - id : PyPrint
-    uri: file://./zenoh-flow-python/examples/sink.py
-    input:
-        id: Data
-        type: usize
+    descriptor : file://./zenoh-flow-python/examples/py-sink.yml
+
 links:
 - from:
     node : RandomGenerator
-    output : Random
+    output : Value
   to:
     node : PyOp
     input : Data
@@ -34,4 +21,4 @@ links:
     output : Data
   to:
     node : PyPrint
-    input : Data
+    input : Value

@@ -11,6 +11,53 @@ on:
   workflow_dispatch:
 
 jobs:
+  checks:
+    name: Code checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          components: rustfmt, clippy
+      - name: Environment setup
+        id: env
+        shell: bash
+        run: |
+          # log some info
+          gcc --version || true
+          rustup -V
+          rustup toolchain list
+          rustup default
+          cargo -V
+          rustc -V
+          echo "GITHUB_REF=${GITHUB_REF}"
+          echo "GITHUB_SHA=${GITHUB_SHA:0:8}"
+          GIT_BRANCH=`[[ $GITHUB_REF =~ ^refs/heads/.* ]] && echo ${GITHUB_REF/refs\/heads\//} || true`
+          echo "GIT_BRANCH=${GIT_BRANCH}" >> $GITHUB_OUTPUT
+          GIT_TAG=`[[ $GITHUB_REF =~ ^refs/tags/.* ]] && echo ${GITHUB_REF/refs\/tags\//} || true`
+          echo "GIT_TAG=${GIT_TAG}" >> $GITHUB_OUTPUT
+          ZENOH_FLOW_VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)
+          echo "ZENOH_FLOW_VERSION=${ZENOH_FLOW_VERSION}" >> $GITHUB_OUTPUT
+          if [ -n "${GIT_TAG}" ]; then
+            IS_RELEASE="true"
+            echo "IS_RELEASE=${IS_RELEASE}" >> $GITHUB_OUTPUT
+            PKG_VERSION=${ZENOH_FLOW_VERSION}
+          elif [ -n "${GIT_BRANCH}" ]; then
+            PKG_VERSION=${GIT_BRANCH}-${GITHUB_SHA:0:8}
+          else
+            PKG_VERSION=${ZENOH_FLOW_VERSION}-${GITHUB_SHA:0:8}
+          fi
+          echo "PKG_VERSION=${PKG_VERSION}" >> $GITHUB_OUTPUT
+    outputs:
+      GIT_BRANCH: ${{ steps.env.outputs.GIT_BRANCH }}
+      GIT_TAG: ${{ steps.env.outputs.GIT_TAG }}
+      IS_RELEASE: ${{ steps.env.outputs.IS_RELEASE }}
+      ZENOH_FLOW_VERSION: ${{ steps.env.outputs.ZENOH_FLOW_VERSION }}
+      PKG_VERSION: ${{ steps.env.outputs.PKG_VERSION }}
+
+
+
   linux-python:
     runs-on: ubuntu-latest
     strategy:
@@ -19,10 +66,10 @@ jobs:
         target: [x86_64, i686]
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python  ${{ env.PYTHON_VERSION }}
+      - name: Set up Python  3.7
         uses: actions/setup-python@v2
         with:
-          python-version:  ${{ env.PYTHON_VERSION }}
+          python-version:  3.7
           architecture: x64
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -42,16 +89,12 @@ jobs:
 
   macos-python:
     runs-on: macos-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        target: x64
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python  ${{ env.PYTHON_VERSION }}
+      - name: Set up Python  3.7
         uses: actions/setup-python@v2
         with:
-          python-version:  ${{ env.PYTHON_VERSION }}
+          python-version:  3.7
           architecture: x64
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -84,7 +127,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: "3.7"
       - name: Build zenoh-flow-python
         uses: messense/maturin-action@v1
         with:
@@ -103,7 +146,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: "3.7"
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -129,46 +172,138 @@ jobs:
           name: wheels
           path: dists
 
-# deploy-wheels:
-#     needs: [macos-python, linux-python, linux-cross-python, linux-armv6-python]
-#     name: deploy wheels to pypi
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/download-artifact@v2
-#         with:
-#           name: wheels
-#           path: dist
-#       - name: Check dist
-#         run: ls -al ./dist/*
-#       - name: publish
-#         if: github.event_name == 'release' && github.event.action == 'published'
-#         uses: pypa/gh-action-pypi-publish@master
-#         with:
-#           user: __token__
-#           password: ${{ secrets.PYPI_API_TOKEN }}
-
-
-
-      # - name: Build Wrappers
-      #   uses: actions-rs/cargo@v1
+  deploy-wheels:
+    needs: [macos-python, linux-python, linux-cross-python, linux-armv6-python]
+    name: deploy wheels to pypi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: wheels
+          path: dist
+      - name: Check dist
+        run: ls -al ./dist/*
+      - name: Publish to crates.io
+        if: github.event_name == 'release' && github.event.action == 'published'
+        shell: bash
+        run: echo "This should publish on pypi.org"
+      # - name: publish
+      #   if: github.event_name == 'release' && github.event.action == 'published'
+      #   uses: pypa/gh-action-pypi-publish@master
       #   with:
-      #     command: build
-      #     args: --release -p zenoh-flow-python-source-wrapper -p zenoh-flow-python-sink-wrapper -p zenoh-flow-python-operator-wrapper
+      #     user: __token__
+      #     password: ${{ secrets.PYPI_API_TOKEN }}
 
-      # - name: Debian package - zenoh-flow-python-source-wrapper
-      #     uses: actions-rs/cargo@v1
-      #     with:
-      #       command: deb
-      #       args: --no-build -pzenoh-flow-python-source-wrapper
 
-      # - name: Debian package - zenoh-flow-python-sink-wrapper
-      #     uses: actions-rs/cargo@v1
-      #     with:
-      #       command: deb
-      #       args: --no-build -p zenoh-flow-python-sink-wrapper
+  builds:
+    name: Build for ${{ matrix.job.target }} on ${{ matrix.job.os }}
+    needs: [checks]
+    runs-on: ${{ matrix.job.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - { target: x86_64-unknown-linux-gnu, arch: amd64, os: ubuntu-22.04 }
+          - { target: x86_64-unknown-linux-gnu, arch: amd64, os: ubuntu-20.04 }
+          - { target: x86_64-unknown-linux-gnu, arch: amd64, os: ubuntu-18.04 }
+          - { target: x86_64-apple-darwin, arch: darwin, os: macos-10.15 }
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install prerequisites
+        shell: bash
+        run: |
+          case ${{ matrix.job.target }} in
+            *-linux-gnu*)
+              cargo install cargo-deb
+              sudo apt-get install libpython3-dev equivs
+              ;;
+          esac
+      - name: Set up Python 3.7
+        if: ${{ matrix.job.target }} == 'x86_64-apple-darwin'
+        uses: actions/setup-python@v2
+        with:
+          python-version:  "3.7"
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.job.target }}
 
-      # - name: Debian package - zenoh-flow-python-operator-wrapper
-      #     uses: actions-rs/cargo@v1
-      #     with:
-      #       command: deb
-      #       args: --no-build -p zenoh-flow-python-operator-wrapper
+      - name: Build Wrappers
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: ${{ matrix.job.use-cross }}
+          command: build
+          args: --release -p zenoh-flow-python-source-wrapper -p zenoh-flow-python-sink-wrapper -p zenoh-flow-python-operator-wrapper --target=${{ matrix.job.target }} --all-targets
+
+      - name: Debian package - zenoh-flow-python-source-wrapper
+        if: runner.os == 'Linux'
+        uses: actions-rs/cargo@v1
+        with:
+          command: deb
+          args: --no-build -p zenoh-flow-python-source-wrapper --target=${{ matrix.job.target }}
+
+      - name: Debian package - zenoh-flow-python-sink-wrapper
+        if: runner.os == 'Linux'
+        uses: actions-rs/cargo@v1
+        with:
+          command: deb
+          args: --no-build -p zenoh-flow-python-sink-wrapper --target=${{ matrix.job.target }}
+
+      - name: Debian package - zenoh-flow-python-operator-wrapper
+        if: runner.os == 'Linux'
+        uses: actions-rs/cargo@v1
+        with:
+          command: deb
+          args: --no-build -p zenoh-flow-python-operator-wrapper --target=${{ matrix.job.target }}
+
+      - name: Build metapackage
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          equivs-build zenoh-flow-python-extension
+
+      - name: Packaging
+        id: package
+        shell: bash
+        run: |
+          TARGET=${{ matrix.job.target }}
+          MAIN_PKG_NAME="${GITHUB_WORKSPACE}/zenoh-flow-python-${{ needs.checks.outputs.PKG_VERSION }}-${TARGET}.zip"
+          DEBS_PKG_NAME="${GITHUB_WORKSPACE}/zenoh-flow-python-${{ needs.checks.outputs.PKG_VERSION }}-${TARGET}-deb-pkgs.zip"
+          case ${TARGET} in
+            *linux*)
+              cd "target/${TARGET}/release/"
+              echo "Packaging ${MAIN_PKG_NAME}:"
+              zip ${MAIN_PKG_NAME} libzenoh_flow_python_*_wrapper.so
+              cd -
+              echo MAIN_PKG_NAME="${MAIN_PKG_NAME}" >> $GITHUB_OUTPUT
+
+              # check if debian packages has been created and packages them in a single tgz
+              if [[ -d target/${TARGET}/debian ]]; then
+                cd target/${TARGET}/debian
+                echo "Packaging ${DEBS_PKG_NAME}:"
+                zip ${DEBS_PKG_NAME} *.deb
+                cd -
+                # checks if the meta package exists and adds it to the zip
+                if [[ -d zenoh-flow-python_*_all.deb ]]; then
+                  zip -ru ${DEBS_PKG_NAME} zenoh-flow-python_*_all.deb
+                fi
+                echo DEBS_PKG_NAME="${DEBS_PKG_NAME}" >> $GITHUB_OUTPUT
+              fi
+              ;;
+            *apple*)
+              cd "target/${TARGET}/release/"
+              echo "Packaging ${MAIN_PKG_NAME}:"
+              zip ${MAIN_PKG_NAME} libzenoh_flow_python_*_wrapper.dylib
+              cd -
+              echo MAIN_PKG_NAME="${MAIN_PKG_NAME}" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: "Upload packages"
+        uses: actions/upload-artifact@master
+        with:
+          name: ${{ matrix.job.target }}
+          path: |
+            ${{ steps.package.outputs.MAIN_PKG_NAME }}
+            ${{ steps.package.outputs.DEBS_PKG_NAME }}
+

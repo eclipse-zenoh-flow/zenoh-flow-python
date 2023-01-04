@@ -1,6 +1,6 @@
 name: python
 file_extension: py
-source_lib: ./target/release/libpy_source.so
-sink_lib: ./target/release/libpy_sink.so
-operator_lib: ./target/release/libpy_op.so
+source_lib: /var/zenoh-flow/python/libzenoh_flow_python_source_wrapper.so
+sink_lib: /var/zenoh-flow/python/libzenoh_flow_python_sink_wrapper.so
+operator_lib: /var/zenoh-flow/python/libzenoh_flow_python_operator_wrapper.so
 config_lib_key: python-script

@@ -5,9 +5,9 @@ name: CI
 
 on:
   push:
-    branches: ["master"]
+    branches: ["master", "wip/0.4"]
   pull_request:
-    branches: ["master"]
+    branches: ["master", "wip/0.4"]
   schedule:
     - cron: "0 6 * * 1-5"
   workflow_dispatch:
@@ -49,8 +49,17 @@ jobs:
           command: fmt
           args: -- --check
 
+      - name: Build Wrappers
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release -p zenoh-flow-python-source-wrapper -p zenoh-flow-python-sink-wrapper -p zenoh-flow-python-operator-wrapper
+
       - name: Build zenoh-flow-python
         uses: PyO3/maturin-action@v1
         with:
           args: --release -m zenoh-flow-python/Cargo.toml
+
+      - name: Install zenoh-flow-python
+        run: pip3 install ./target/wheels/*.whl
 

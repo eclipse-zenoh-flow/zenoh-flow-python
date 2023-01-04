@@ -15,9 +15,14 @@
 Zenoh Flow API Reference
 ========================
 
-Context
--------
-.. autoclass:: zenoh_flow.Context
+Output
+----------
+.. autoclass:: zenoh_flow.Output
+    :members:
+
+Input
+------------
+.. autoclass:: zenoh_flow.Input
     :members:
 
 DataMessage
@@ -25,23 +30,12 @@ DataMessage
 .. autoclass:: zenoh_flow.DataMessage
     :members:
 
-InputToken
------------
-.. autoclass:: zenoh_flow.InputToken
+Context
+-------
+.. autoclass:: zenoh_flow.types.Context
     :members:
 
-Inputs
---------
-.. autoclass:: zenoh_flow.Inputs
-    :members:
-
-Outputs
---------
-.. autoclass:: zenoh_flow.Outputs
-    :members:
-
-
-LocalDeadlineMiss
------------------
-.. autoclass:: zenoh_flow.LocalDeadlineMiss
+Timestamp
+---------
+.. autoclass:: zenoh_flow.types.Timestamp
     :members:

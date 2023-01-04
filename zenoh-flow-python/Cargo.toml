@@ -1,35 +1,19 @@
-#
-# Copyright (c) 2022 ZettaScale Technology
-#
-# This program and the accompanying materials are made available under the
-# terms of the Eclipse Public License 2.0 which is available at
-# http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
-# which is available at https://www.apache.org/licenses/LICENSE-2.0.
-#
-# SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
-#
-# Contributors:
-#   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
-#
-
 [package]
 name = "zenoh-flow-python"
-version = "0.3.0"
-repository = "https://github.com/atolab/zenoh-flow-python"
-homepage = "http://zenoh.io"
-authors = ["kydos <angelo@icorsaro.net>",
-           "gabrik <gabriele.baldoni@gmail.com>",
-           "Julien Loudet <julien.loudet@zettascale.tech>",]
+version = "0.4.0-alpha.1"
+authors = ["ZettaScale Zenoh Team <zenoh@zettascale.tech>"]
+categories = ["network-programming", "api-bindings"]
+description = "Zenoh-Flow  Python APIs"
 edition = "2018"
+homepage = "https://github.com/ZettaScaleLabs/zenoh-flow-python"
 license = " EPL-2.0 OR Apache-2.0"
-categories = ["network-programming"]
-description = "Zenoh-Flow: zenoh-based data-flow programming framework for computations that span from the cloud to the device."
-readme = "../README.md"
+readme = "README.md"
+repository = "https://github.com/ZettaScaleLabs/zenoh-flow-python"
+
 
 [dependencies]
-zenoh-flow-python-types = { path = "../zenoh-flow-python-types"}
-uhlc = "0.4"
 pyo3 = "0.16"
+zenoh-flow-python-commons = { version =  "=0.4.0-alpha.1", path = "../zenoh-flow-python-commons/" }
 
 [features]
 abi-py37 = ["pyo3/abi3-py37"]
@@ -39,21 +23,3 @@ default = ["extension-module", "abi-py37"]
 [lib]
 name = "zenoh_flow"
 crate-type = ["cdylib"]
-
-
-
-
-
-[package.metadata.maturin]
-classifier = [
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Rust",
-    "Intended Audience :: Developers",
-    "Development Status :: 1 - Alpha",
-    "Topic :: System :: Networking",
-    "License :: OSI Approved :: Apache Software License",
-    "License :: OSI Approved :: Eclipse Public License 2.0 (EPL-2.0)",
-    "Operating System :: POSIX :: Linux",
-    "Operating System :: MacOS :: MacOS X"
-]
-maintainer = "ADLINK zenoh team, <zenoh@adlink-labs.tech>"

@@ -29,8 +29,8 @@ import zenoh_flow
 # -- Project information -----------------------------------------------------
 
 project = 'zenoh-flow'
-copyright = '2022, ADLINK zenoh team, <zenoh@adlink-labs.tech>'
-author = 'ADLINK zenoh team, <zenoh@adlink-labs.tech>'
+copyright = '2022, ZettaScale Technology'
+author = 'ZettaScale Zenoh Team, <zenoh@zettascale.tech>'
 
 # The full version, including alpha/beta/rc tags
 release = '0.2.0-dev'
@@ -87,4 +87,4 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+# html_static_path = ['_static']

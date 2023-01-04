@@ -15,21 +15,24 @@
 [workspace]
 
 members = [
+  "zenoh-flow-python-operator-wrapper",
+  "zenoh-flow-python-sink-wrapper",
+  "zenoh-flow-python-source-wrapper",
   "zenoh-flow-python",
-  "zenoh-flow-python-types",
-  "py-source",
-  "py-sink",
-  "py-op",
+  "zenoh-flow-python-commons",
 ]
 
 [profile.dev]
-debug=true
+debug = true
 opt-level = 0
 
-
 [profile.release]
-debug=true
-lto="fat"
-codegen-units=1
-opt-level=3
-panic="abort"
+debug = false
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+panic = "abort"
+
+
+[patch.crates-io]
+zenoh-flow = { git = "https://github.com/eclipse-zenoh/zenoh-flow.git", branch = "master"}

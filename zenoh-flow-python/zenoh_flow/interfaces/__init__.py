@@ -12,17 +12,7 @@
 #   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 #
 
-[package]
-name = "zenoh-flow-python-types"
-version = "0.3.0"
-edition = "2018"
 
-[dependencies]
-zenoh-flow = { git = "https://github.com/eclipse-zenoh/zenoh-flow.git", tag = "v0.3.0" }
-uhlc = "0.4"
-pyo3 = "0.16"
-
-
-[features]
-abi-py37 = ["pyo3/abi3-py37"]
-default = ["abi-py37"]
+from zenoh_flow.interfaces.operator import Operator
+from zenoh_flow.interfaces.sink import Sink
+from zenoh_flow.interfaces.source import Source

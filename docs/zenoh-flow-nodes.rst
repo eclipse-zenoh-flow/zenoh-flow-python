@@ -16,24 +16,23 @@
 Zenoh Flow interfaces references
 ================================
 
-Zenoh Flow
-----------
-.. autoclass:: zenoh_flow
-    :members:
+Note that, this API is NOT meant to be used directly.
+Instead your operators, sink and sources MUST implement the methods provided by the following classes.
+Only then, such nodes can to be loaded by a Zenoh Flow Runtime
 
 Source
 ------
-.. autoclass:: zenoh_flow.Source
+.. autoclass:: zenoh_flow.interfaces.Source
     :members:
 
 
 Sink
 ----
-.. autoclass:: zenoh_flow.Sink
+.. autoclass:: zenoh_flow.interfaces.Sink
     :members:
 
 
 Operator
 --------
-.. autoclass:: zenoh_flow.Operator
+.. autoclass:: zenoh_flow.interfaces.Operator
     :members:

@@ -17,13 +17,15 @@ zenoh-flow-python
 =================
 
 
-The *zenoh-flow-python* library provides a set of Python interfaces to write your
-operators, source and sink for Zenoh Flow.
+Zenoh Flow
+----------
+.. automodule:: zenoh_flow
+    :members:
 
 
-Note that API it's NOT meant to be used directly, instead your operators, sink
-and sources have to implement the methods provided by the different classes.
-Then such nodes need to be loaded by a Zenoh Flow Runtime
+
+
+
 
 .. toctree::
     :maxdepth: 1
