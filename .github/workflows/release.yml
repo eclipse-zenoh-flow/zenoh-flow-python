@@ -172,23 +172,27 @@ jobs:
           name: wheels
           path: dists
 
-  # deploy-wheels:
-  #   needs: [macos-python, linux-python, linux-cross-python, linux-armv6-python]
-  #   name: deploy wheels to pypi
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/download-artifact@v2
-  #       with:
-  #         name: wheels
-  #         path: dist
-  #     - name: Check dist
-  #       run: ls -al ./dist/*
-  #     - name: publish
-  #       if: github.event_name == 'release' && github.event.action == 'published'
-  #       uses: pypa/gh-action-pypi-publish@master
-  #       with:
-  #         user: __token__
-  #         password: ${{ secrets.PYPI_API_TOKEN }}
+  deploy-wheels:
+    needs: [macos-python, linux-python, linux-cross-python, linux-armv6-python]
+    name: deploy wheels to pypi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: wheels
+          path: dist
+      - name: Check dist
+        run: ls -al ./dist/*
+      - name: Publish to crates.io
+        if: github.event_name == 'release' && github.event.action == 'published'
+        shell: bash
+        run: echo "This should publish on pypi.org"
+      # - name: publish
+      #
+      #   uses: pypa/gh-action-pypi-publish@master
+      #   with:
+      #     user: __token__
+      #     password: ${{ secrets.PYPI_API_TOKEN }}
 
 
   builds:
@@ -302,5 +306,4 @@ jobs:
           path: |
             ${{ steps.package.outputs.MAIN_PKG_NAME }}
             ${{ steps.package.outputs.DEBS_PKG_NAME }}
-
 
