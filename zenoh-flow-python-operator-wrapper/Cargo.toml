@@ -14,7 +14,7 @@
 
 [package]
 name = "zenoh-flow-python-operator-wrapper"
-version = "0.4.0-alpha.1"
+version = "0.5.0-dev"
 authors = ["ZettaScale Zenoh Team <zenoh@zettascale.tech>"]
 categories = ["network-programming"]
 description = "Zenoh-Flow Python Operator wrapper"
@@ -30,8 +30,8 @@ libloading = "0.7"
 log = "0.4"
 pyo3 = "0.16"
 pyo3-asyncio = { version = "0.16", features = ["attributes", "async-std-runtime"] }
-zenoh-flow = "=0.4.0-alpha.1"
-zenoh-flow-python-commons = { version =  "=0.4.0-alpha.1", path = "../zenoh-flow-python-commons/" }
+zenoh-flow = "=0.5.0-dev"
+zenoh-flow-python-commons = { version =  "=0.5.0-dev", path = "../zenoh-flow-python-commons/" }
 
 [build-dependencies]
 pyo3-build-config = { version = "0.17", features = ["resolve-config"] }
