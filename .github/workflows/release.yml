@@ -78,7 +78,7 @@ jobs:
           python-version:  3.7
           architecture: x64
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: actions-rs/toolchain@v1
         with:
           components: rustfmt, clippy
       - name: Build zenoh-flow-python
@@ -103,7 +103,7 @@ jobs:
           python-version:  3.7
           architecture: x64
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: actions-rs/toolchain@v1
         with:
           components: rustfmt, clippy
       - name: Build zenoh-flow-python - x86_64
@@ -156,8 +156,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
-          profile: minimal
+          components: rustfmt, clippy
           target: arm-unknown-linux-gnueabihf
           default: true
       - name: install cross toolchain
@@ -226,8 +225,9 @@ jobs:
         with:
           python-version:  "3.7"
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: actions-rs/toolchain@v1
         with:
+          components: rustfmt, clippy
           target: ${{ matrix.job.target }}
 
       - name: Build Wrappers

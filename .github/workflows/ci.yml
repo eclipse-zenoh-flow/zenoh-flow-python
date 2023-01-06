@@ -33,9 +33,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
-          profile: minimal
-          default: true
+          components: rustfmt, clippy
 
       - name: Clippy check
         uses: actions-rs/cargo@v1
