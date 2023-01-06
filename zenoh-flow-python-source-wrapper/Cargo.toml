@@ -52,7 +52,7 @@ maintainer = "zenoh-dev@eclipse.org"
 copyright = "2017, 2022 ZettaScale Technology Inc."
 section = "libraries"
 license-file = ["../LICENSE", "0"]
-depends = "$auto, zenoh-flow-daemon (= 0.4.0~alpha.1 )"
+depends = "$auto"
 assets = [
     # library
     ["target/release/libzenoh_flow_python_source_wrapper.so", "/var/zenoh-flow/python/libzenoh_flow_python_source_wrapper.so", "644"],
