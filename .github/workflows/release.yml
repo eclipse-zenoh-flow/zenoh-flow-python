@@ -263,6 +263,7 @@ jobs:
         shell: bash
         run: |
           equivs-build zenoh-flow-python-extension
+          equivs-build zenoh-flow-python-extension-plugin
 
       - name: Packaging
         id: package
