@@ -32,7 +32,3 @@ lto = "fat"
 codegen-units = 1
 opt-level = 3
 panic = "abort"
-
-
-[patch.crates-io]
-zenoh-flow = { git = "https://github.com/eclipse-zenoh/zenoh-flow.git", branch = "master"}
