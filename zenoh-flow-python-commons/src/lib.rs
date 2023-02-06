@@ -118,7 +118,7 @@ pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObj
                 Ok(n.as_i64()
                     .ok_or_else(|| {
                         PyErr::from_value(
-                            PyTypeError::new_err(format!("Unable to convert {:?} to i64", n))
+                            PyTypeError::new_err(format!("Unable to convert {n:?} to i64"))
                                 .value(py),
                         )
                     })?
@@ -127,7 +127,7 @@ pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObj
                 Ok(n.as_u64()
                     .ok_or_else(|| {
                         PyErr::from_value(
-                            PyTypeError::new_err(format!("Unable to convert {:?} to u64", n))
+                            PyTypeError::new_err(format!("Unable to convert {n:?} to u64"))
                                 .value(py),
                         )
                     })?
@@ -136,7 +136,7 @@ pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObj
                 Ok(n.as_f64()
                     .ok_or_else(|| {
                         PyErr::from_value(
-                            PyTypeError::new_err(format!("Unable to convert {:?} to f64", n))
+                            PyTypeError::new_err(format!("Unable to convert {n:?} to f64"))
                                 .value(py),
                         )
                     })?
