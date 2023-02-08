@@ -73,6 +73,14 @@ $ make html
 The docs will be available under `_build/html/index.html`.
 
 
+#### Install the Python extension for Zenoh-Flow
+
+In order to install the Python extension, please execute the following steps:
+- Copy the result of the build into `/var/zenoh-flow/python/`: `sudo cp ./target/release/libzenoh_flow_python* /var/zenoh-flow/python/`
+- Update the paths in `01-python.zfext` according to your operating system (i.e., replace `.so` with `.dylib` for MacOS).
+- Copy `01-python.zfext` into `/etc/zenoh-flow/extensions.d`: `sudo cp 01-python.zfext /etc/zenoh-flow/extensions.d/`
+
+
 ### Run an example
 
 Clone, build and install [Zenoh Flow](https://github.com/zenoh/zenoh-flow), and then use the provided `py-pipeline.yml` example to run it.
