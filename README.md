@@ -58,7 +58,7 @@ Build the Python wrappers.
 :warning: **Python Wrappers SHOULD NOT be built within a Python virtual environment**
 
 ```bash
-$ cargo build --release -p zenoh-flow-operator-wrapper -p zenoh-flow-sink-wrapper -p zenoh-flow-source-wrapper
+$ cargo build --release -p zenoh-flow-python-operator-wrapper -p zenoh-flow-python-sink-wrapper -p zenoh-flow-python-source-wrapper
 ```
 
 #### Build the docs
