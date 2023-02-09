@@ -38,7 +38,7 @@ Build the Python Wheel **within** a Python virtual environment.
 ```bash
 $ python3 -m venv venv
 $ source venv/bin/activate
-(venv) $ git clone https://github.com/atolab/zenoh-flow-python
+(venv) $ git clone https://github.com/eclipse-zenoh/zenoh-flow-python
 (venv) $ cd zenoh-flow-python/zenoh-flow-python
 (venv) $ pip3 install -r requirements-dev.txt
 (venv) $ maturin build --release
@@ -83,12 +83,6 @@ In order to install the Python extension, please execute the following steps:
 
 ### Run an example
 
-Clone, build and install [Zenoh Flow](https://github.com/zenoh/zenoh-flow), and then use the provided `py-pipeline.yml` example to run it.
-
-:bulb: Note that you actually only need to update the paths in `py-pipeline.yml` file.
-
-```bash
-$ zfctl launch py-pipeline.yml
-```
+Please refer to our getting started example: [Zenoh-Flow Getting started](https://github.com/ZettaScaleLabs/zenoh-flow-examples/tree/master/getting-started).
 
 

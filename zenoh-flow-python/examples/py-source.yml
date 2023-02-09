@@ -1,5 +1,5 @@
 id: PySource
-uri: file://./zenoh-flow-python/examples/source.py
+uri: file://./source.py
 outputs:
   - id: Value
     type: usize
