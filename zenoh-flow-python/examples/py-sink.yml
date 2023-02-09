@@ -1,5 +1,5 @@
 id: PySink
-uri: file://./zenoh-flow-python/examples/sink.py
+uri: file://./sink.py
 inputs:
   - id: Value
     type: usize
