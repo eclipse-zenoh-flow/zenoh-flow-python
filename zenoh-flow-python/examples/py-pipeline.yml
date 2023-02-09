@@ -1,13 +1,13 @@
 flow: PythonFlow
 operators:
   - id : PyOp
-    descriptor : file://./zenoh-flow-python/examples/py-operator.yml
+    descriptor : file://./py-operator.yml
 sources:
   - id : RandomGenerator
-    descriptor : file://./zenoh-flow-python/examples/py-source.yml
+    descriptor : file://./py-source.yml
 sinks:
   - id : PyPrint
-    descriptor : file://./zenoh-flow-python/examples/py-sink.yml
+    descriptor : file://./py-sink.yml
 
 links:
 - from:

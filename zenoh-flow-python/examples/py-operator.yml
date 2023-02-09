@@ -1,5 +1,5 @@
 id: PyOperator
-uri: file://./zenoh-flow-python/examples/operator.py
+uri: file://./operator.py
 inputs:
   - id: Data
     type: usize
