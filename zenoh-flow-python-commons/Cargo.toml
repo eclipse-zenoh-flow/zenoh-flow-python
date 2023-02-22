@@ -14,7 +14,7 @@
 
 [package]
 name = "zenoh-flow-python-commons"
-version = "0.4.0-alpha.1"
+version = "0.4.0-alpha.2"
 authors = ["ZettaScale Zenoh Team <zenoh@zettascale.tech>"]
 categories = ["network-programming", "api-bindings"]
 description = "Zenoh-Flow Python common types and utility functions."

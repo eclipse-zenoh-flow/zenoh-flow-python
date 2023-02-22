@@ -2940,9 +2940,9 @@ dependencies = [
 
 [[package]]
 name = "zenoh-flow"
-version = "0.4.0-alpha.1"
+version = "0.4.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9b1fd0f56e321739d52b0f76227c4c23b625b056677216c9519bad6aa8358d9"
+checksum = "a9e3b2554ea15e78321c90e0d7328f7bb1d30bf50a0cf9953b6eff2e8648791f"
 dependencies = [
  "anyhow",
  "async-lock",
@@ -2987,9 +2987,9 @@ dependencies = [
 
 [[package]]
 name = "zenoh-flow-derive"
-version = "0.4.0-alpha.1"
+version = "0.4.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b079327bc78170d67cd51f5b6cdf44afeee67a08d2c1c7b6bbc270b9324e45eb"
+checksum = "df547cfeeb595f45dd279e49bbe3d16b98bbc89ab8b0716186a4802b135fa2b2"
 dependencies = [
  "Inflector",
  "async-std",
@@ -3006,7 +3006,7 @@ dependencies = [
 
 [[package]]
 name = "zenoh-flow-python"
-version = "0.4.0-alpha.1"
+version = "0.4.0-alpha.2"
 dependencies = [
  "pyo3",
  "zenoh-flow-python-commons",
@@ -3014,7 +3014,7 @@ dependencies = [
 
 [[package]]
 name = "zenoh-flow-python-commons"
-version = "0.4.0-alpha.1"
+version = "0.4.0-alpha.2"
 dependencies = [
  "async-std",
  "flume",
@@ -3028,7 +3028,7 @@ dependencies = [
 
 [[package]]
 name = "zenoh-flow-python-operator-wrapper"
-version = "0.4.0-alpha.1"
+version = "0.4.0-alpha.2"
 dependencies = [
  "async-trait",
  "libloading",
@@ -3042,7 +3042,7 @@ dependencies = [
 
 [[package]]
 name = "zenoh-flow-python-sink-wrapper"
-version = "0.4.0-alpha.1"
+version = "0.4.0-alpha.2"
 dependencies = [
  "async-trait",
  "libloading",
@@ -3056,7 +3056,7 @@ dependencies = [
 
 [[package]]
 name = "zenoh-flow-python-source-wrapper"
-version = "0.4.0-alpha.1"
+version = "0.4.0-alpha.2"
 dependencies = [
  "async-trait",
  "libloading",

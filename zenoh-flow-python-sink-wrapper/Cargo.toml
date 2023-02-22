@@ -14,7 +14,7 @@
 
 [package]
 name = "zenoh-flow-python-sink-wrapper"
-version = "0.4.0-alpha.1"
+version = "0.4.0-alpha.2"
 authors = ["ZettaScale Zenoh Team <zenoh@zettascale.tech>"]
 categories = ["network-programming"]
 description = "Zenoh-Flow Python Sink wrapper"
