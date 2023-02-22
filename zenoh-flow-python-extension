@@ -7,9 +7,9 @@ Homepage: https://github.com/eclipse-zenoh/zenoh-flow
 Standards-Version: 3.9.2
 
 Package: zenoh-flow-python
-Version: 0.4.0~alpha.1
+Version: 0.4.0~alpha.2
 Maintainer: ZettaScale Zenoh Team <zenoh@zettascale.tech>
-Depends: zenoh-flow-daemon (= 0.4.0~alpha.1 ), zenoh-flow-python-operator-wrapper (= 0.4.0~alpha.1), zenoh-flow-python-sink-wrapper (= 0.4.0~alpha.1), zenoh-flow-python-source-wrapper (= 0.4.0~alpha.1)
+Depends: zenoh-flow-daemon (= 0.4.0~alpha.2 ), zenoh-flow-python-operator-wrapper (= 0.4.0~alpha.2), zenoh-flow-python-sink-wrapper (= 0.4.0~alpha.2), zenoh-flow-python-source-wrapper (= 0.4.0~alpha.2)
 # Recommends: <comma-separated list of packages>
 # Suggests: <comma-separated list of packages>
 # Provides: <comma-separated list of packages>
