@@ -44,12 +44,12 @@ impl Drop for PythonState {
         let py = gil.python();
 
         let py_op = self
-            .module
+            .py_state
             .cast_as::<PyAny>(py)
             .expect("Unable to get Python Node module!");
 
         py_op
-            .call_method1("finalize", (py_op,))
+            .call_method0("finalize")
             .expect("Unable to call Python finalize!");
     }
 }
