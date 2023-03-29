@@ -195,6 +195,7 @@ class Inputs:
         if in_stream is None:
             return None
         in_stream = Input(in_stream, input_type, deserializer)
+        return in_stream
 
     def take_raw(self,  port_id: str) -> InnerInput:
         """
@@ -210,6 +211,12 @@ class Inputs:
             InnerInput: The raw associated input
         """
         return self.__inputs.get(port_id, None)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return f"Inputs(__inputs={self.__inputs})"
 
 
 class Outputs:
@@ -239,6 +246,7 @@ class Outputs:
         if out_stream is None:
             return None
         out_stream = Output(out_stream, output_type, serializer)
+        return out_stream
 
     def take_raw(self,  port_id: str) -> InnerOutput:
         """
@@ -255,3 +263,8 @@ class Outputs:
         """
         return self.__outputs.get(port_id, None)
 
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return f"Outputs(__outputs={self.__outputs})"
