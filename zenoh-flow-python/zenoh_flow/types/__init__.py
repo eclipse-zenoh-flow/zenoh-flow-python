@@ -191,7 +191,7 @@ class Inputs:
             Input: The typed associated input
 
         """
-        in_stream = self.__input.get(port_id, None)
+        in_stream = self.__inputs.get(port_id, None)
         if in_stream is None:
             return None
         in_stream = Input(in_stream, input_type, deserializer)
