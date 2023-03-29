@@ -183,7 +183,7 @@ Operator:
 
 
 from .zenoh_flow import InnerInput, InnerOutput, InnerDataMessage
-
-from zenoh_flow import interfaces
 from zenoh_flow import types
-from zenoh_flow.types import Inputs, Outputs, Input, Output, DataMessage
+from .types import Inputs, Outputs, Input, Output, DataMessage
+from zenoh_flow import interfaces
+
