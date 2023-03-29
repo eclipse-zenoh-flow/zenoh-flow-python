@@ -13,7 +13,6 @@
 //
 
 use async_trait::async_trait;
-use pyo3::types::{PyDict, PyString};
 use pyo3::{prelude::*, types::PyModule};
 use pyo3_asyncio::TaskLocals;
 use std::fs;
@@ -21,7 +20,7 @@ use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
 use zenoh_flow_python_commons::{
-    configuration_into_py, context_into_py, from_pyerr_to_zferr, Output as PyOutput, PythonState,
+    configuration_into_py, context_into_py, from_pyerr_to_zferr, outputs_into_py, PythonState,
 };
 
 #[cfg(target_family = "unix")]
@@ -46,7 +45,7 @@ impl Source for PySource {
     async fn new(
         context: Context,
         configuration: Option<Configuration>,
-        mut outputs: Outputs,
+        outputs: Outputs,
     ) -> Result<Self> {
         let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
 
@@ -86,18 +85,8 @@ impl Source for PySource {
                         .call_method0("register")
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    let py_senders = PyDict::new(py);
-
-                    let outputs_ids = outputs.keys().cloned().collect::<Vec<_>>();
-                    for id in &outputs_ids {
-                        let output = outputs
-                            .take_raw(id)
-                            .ok_or_else(|| zferror!(ErrorKind::MissingOutput(id.to_string())))?;
-                        let pyo3_tx = PyOutput::from(output);
-                        py_senders
-                            .set_item(PyString::new(py, id), &pyo3_tx.into_py(py))
-                            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-                    }
+                    let py_senders =
+                        outputs_into_py(py, outputs).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                     // Setting asyncio event loop
                     let asyncio = py.import("asyncio").unwrap();

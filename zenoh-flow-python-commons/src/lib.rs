@@ -23,8 +23,8 @@ use std::convert::{TryFrom, TryInto};
 use zenoh_flow::bail;
 
 use zenoh_flow::prelude::{
-    zferror, Configuration, Context as ZFContext, Error, ErrorKind, InputRaw as ZInput,
-    OutputRaw as ZOutput, Payload,
+    zferror, Configuration, Context as ZFContext, Error, ErrorKind, InputRaw as ZInput, Inputs,
+    OutputRaw as ZOutput, Outputs, Payload,
 };
 use zenoh_flow::types::LinkMessage as ZFMessage;
 
@@ -148,14 +148,47 @@ pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObj
     }
 }
 
+pub fn inputs_into_py(py: Python, mut inputs: Inputs) -> PyResult<PyObject> {
+    let py_zenoh_flow = py.import("zenoh_flow").unwrap();
+
+    let py_receivers = PyDict::new(py);
+    let inputs_ids = inputs.keys().cloned().collect::<Vec<_>>();
+    for id in &inputs_ids {
+        let input = inputs.take_raw(id).unwrap(); // FIXME
+                                                  // .ok_or_else(|| zferror!(ErrorKind::MissingInput(id.to_string())))?;
+        let pyo3_rx = InnerInput::from(input);
+        py_receivers.set_item(PyString::new(py, id), &pyo3_rx.into_py(py))?;
+        // .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+    }
+
+    let py_inputs = py_zenoh_flow.getattr("Inputs")?.call1((py_receivers,))?;
+    Ok(py_inputs.to_object(py))
+}
+
+pub fn outputs_into_py(py: Python, mut outputs: Outputs) -> PyResult<PyObject> {
+    let py_zenoh_flow = py.import("zenoh_flow").unwrap();
+
+    let py_senders = PyDict::new(py);
+    let outputs_ids = outputs.keys().cloned().collect::<Vec<_>>();
+    for id in &outputs_ids {
+        let output = outputs.take_raw(id).unwrap();
+        // .ok_or_else(|| zferror!(ErrorKind::MissingOutput(id.to_string())))?;
+        let pyo3_tx = InnerOutput::from(output);
+        py_senders.set_item(PyString::new(py, id), &pyo3_tx.into_py(py))?;
+    }
+
+    let py_outputs = py_zenoh_flow.getattr("Outputs")?.call1((py_senders,))?;
+    Ok(py_outputs.to_object(py))
+}
+
 /// Channels that sends data to downstream nodes.
 #[pyclass]
-pub struct Output {
+pub struct InnerOutput {
     pub(crate) sender: Arc<ZOutput>,
 }
 
 #[pymethods]
-impl Output {
+impl InnerOutput {
     /// Send, *asynchronously*, the `DataMessage` on all channels.
     ///
     /// If no timestamp is provided, the current timestamp — as per the HLC — is taken.
@@ -186,7 +219,7 @@ impl Output {
     }
 }
 
-impl From<ZOutput> for Output {
+impl From<ZOutput> for InnerOutput {
     fn from(other: ZOutput) -> Self {
         Self {
             sender: Arc::new(other),
@@ -194,7 +227,7 @@ impl From<ZOutput> for Output {
     }
 }
 
-impl From<&ZOutput> for Output {
+impl From<&ZOutput> for InnerOutput {
     fn from(other: &ZOutput) -> Self {
         Self {
             sender: Arc::new(other.clone()),
@@ -204,12 +237,12 @@ impl From<&ZOutput> for Output {
 
 /// Channels that receives data from upstream nodes.
 #[pyclass(subclass)]
-pub struct Input {
+pub struct InnerInput {
     pub(crate) receiver: Arc<ZInput>,
 }
 
 #[pymethods]
-impl Input {
+impl InnerInput {
     /// Returns the first `DataMessage` that was received, *asynchronously*, on any of the channels
     /// associated with this Input.
     ///
@@ -221,7 +254,7 @@ impl Input {
                 .recv()
                 .await
                 .map_err(|_| PyValueError::new_err("Unable to receive data"))?;
-            DataMessage::try_from(rust_msg)
+            InnerDataMessage::try_from(rust_msg)
         })
     }
 
@@ -232,7 +265,7 @@ impl Input {
     }
 }
 
-impl From<ZInput> for Input {
+impl From<ZInput> for InnerInput {
     fn from(other: ZInput) -> Self {
         Self {
             receiver: Arc::new(other),
@@ -240,7 +273,7 @@ impl From<ZInput> for Input {
     }
 }
 
-impl From<&ZInput> for Input {
+impl From<&ZInput> for InnerInput {
     fn from(other: &ZInput) -> Self {
         Self {
             receiver: Arc::new(other.clone()),
@@ -248,7 +281,7 @@ impl From<&ZInput> for Input {
     }
 }
 
-impl TryInto<ZInput> for Input {
+impl TryInto<ZInput> for InnerInput {
     type Error = zenoh_flow::prelude::Error;
 
     fn try_into(self) -> Result<ZInput, Self::Error> {
@@ -266,14 +299,14 @@ impl TryInto<ZInput> for Input {
 /// It contains the actual data, the timestamp associated, and
 /// information whether the message is a `Watermark`
 #[pyclass(subclass)]
-pub struct DataMessage {
+pub struct InnerDataMessage {
     data: Py<PyBytes>,
     ts: Py<PyLong>,
     is_watermark: bool,
 }
 
 #[pymethods]
-impl DataMessage {
+impl InnerDataMessage {
     /// Creates a new [`DataMessage`](`DataMessage`) with given bytes,
     ///  timestamp and watermark flag.
     #[new]
@@ -304,7 +337,7 @@ impl DataMessage {
     }
 }
 
-impl TryFrom<ZFMessage> for DataMessage {
+impl TryFrom<ZFMessage> for InnerDataMessage {
     type Error = PyErr;
 
     fn try_from(other: ZFMessage) -> Result<Self, Self::Error> {

@@ -54,7 +54,7 @@ Source:
 .. code-block:: python
 
     from zenoh_flow.interfaces import Source
-    from zenoh_flow import DataSender
+    from zenoh_flow import Outputs
     from zenoh_flow.types import Context
     from typing import Any, Dict
     import time
@@ -66,11 +66,11 @@ Source:
             self,
             context: Context,
             configuration: Dict[str, Any],
-            outputs: Dict[str, DataSender]
+            outputs: Outputs
         ):
             configuration = {} if configuration is None else configuration
             self.value = int(configuration.get("value", 0))
-            self.output = outputs.get("Value", None)
+            self.output = outputs.take("Value", int, int_to_bytes)
 
         def finalize(self) -> None:
             return None
@@ -79,7 +79,7 @@ Source:
             await asyncio.sleep(0.5)
             self.value += 1
             print(f"Sending {self.value}")
-            await self.output.send(int_to_bytes(self.value))
+            await self.output.send(self.value)
 
 
     def int_to_bytes(x: int) -> bytes:
@@ -97,7 +97,7 @@ Sink:
 .. code-block:: python
 
     from zenoh_flow.interfaces import Sink
-    from zenoh_flow import DataReceiver
+    from zenoh_flow import Inputs
     from zenoh_flow.types import Context
     from typing import Dict, Any
 
@@ -107,9 +107,9 @@ Sink:
         def __init__(self,
             context: Context,
             configuration: Dict[str, Any],
-            inputs: Dict[str, DataReceiver]
+            inputs: Inputs
         ):
-            self.in_stream = inputs.get("Value", None)
+            self.in_stream = inputs.take("Value", int, int_from_bytes)
 
         def finalize(self) -> None:
             return None
@@ -118,7 +118,7 @@ Sink:
 
         async def iteration(self) -> None:
             data_msg = await self.in_stream.recv()
-            print(f"Received {int_from_bytes(data_msg.data)}")
+            print(f"Received {data_msg.get_data())}")
             return None
 
 
@@ -136,7 +136,7 @@ Operator:
 .. code-block:: python
 
     from zenoh_flow.interfaces import Operator
-    from zenoh_flow import DataReceiver, DataSender
+    from zenoh_flow import Inputs, Outputs
     from zenoh_flow.types import Context
     from typing import Dict, Any
 
@@ -146,11 +146,11 @@ Operator:
             self,
             context: Context,
             configuration: Dict[str, Any],
-            inputs: Dict[str, DataReceiver],
-            outputs: Dict[str, DataSender],
+            inputs: Inputs,
+            outputs: Outputs,
         ):
-            self.output = outputs.get("Data", None)
-            self.in_stream = inputs.get("Data", None)
+            self.output = outputs.take("Data", int, int_to_bytes)
+            self.in_stream = inputs.take("Data", int, int_from_bytes)
 
         def finalize(self) -> None:
             return None
@@ -162,7 +162,8 @@ Operator:
             # https://docs.python.org/3/library/asyncio-task.html#asyncio.wait
 
             data_msg = await self.in_stream.recv()
-            await self.output.send(data_msg.data)
+            new_data = data_msg.get_data() * 2
+            await self.output.send(new_data)
             return None
 
 
@@ -181,7 +182,8 @@ Operator:
 '''
 
 
-from .zenoh_flow import Input, Output, DataMessage
+from .zenoh_flow import InnerInput, InnerOutput, InnerDataMessage
 
 from zenoh_flow import interfaces
 from zenoh_flow import types
+from zenoh_flow.types import Inputs, Outputs, Input, Output, DataMessage

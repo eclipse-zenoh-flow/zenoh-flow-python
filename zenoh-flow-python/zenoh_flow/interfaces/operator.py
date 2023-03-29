@@ -12,7 +12,7 @@
 #   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 #
 
-from zenoh_flow import Input, Output
+from zenoh_flow import Inputs, Outputs
 from zenoh_flow.types import Context
 from typing import Dict, Any
 
@@ -31,9 +31,9 @@ class Operator(object):
     :param configuration: Configuration
     :type configuration: dict
     :param inputs: The input streams
-    :type inputs: :class:`Dict[str, Input]`
+    :type inputs: :class:`Inputs`
     :param outputs: The output streams
-    :type outputs: :class:`Dict[str, Output]`
+    :type outputs: :class:`Outputs`
 
     """
 
@@ -41,8 +41,8 @@ class Operator(object):
         self,
         context: Context,
         configuration: Dict[str, Any],
-        inputs: Dict[str, Input],
-        outputs: Dict[str, Output],
+        inputs: Inputs,
+        outputs: Outputs,
     ):
         """
         The `__init__` method is called by the zenoh flow runtime.
@@ -55,9 +55,9 @@ class Operator(object):
         :param configuration: Configuration
         :type configuration: dict
         :param inputs: The input streams
-        :type inputs: :class:`Dict[str, Input]`
+        :type inputs: :class:`Inputs`
         :param outputs: The output streams
-        :type outputs: :class:`Dict[str, Output]`
+        :type outputs: :class:`Outputs`
 
         :rtype: None
         """

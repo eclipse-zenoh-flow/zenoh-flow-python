@@ -13,7 +13,6 @@
 //
 
 use async_trait::async_trait;
-use pyo3::types::{PyDict, PyString};
 use pyo3::{prelude::*, types::PyModule};
 use pyo3_asyncio::TaskLocals;
 use std::fs;
@@ -21,7 +20,7 @@ use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
 use zenoh_flow_python_commons::{
-    configuration_into_py, context_into_py, from_pyerr_to_zferr, Input as PyInput, PythonState,
+    configuration_into_py, context_into_py, from_pyerr_to_zferr, inputs_into_py, PythonState,
 };
 
 #[cfg(target_family = "unix")]
@@ -47,7 +46,7 @@ impl Sink for PySink {
     async fn new(
         ctx: Context,
         configuration: Option<Configuration>,
-        mut inputs: Inputs,
+        inputs: Inputs,
     ) -> Result<Self> {
         let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
 
@@ -83,18 +82,8 @@ impl Sink for PySink {
                         .call_method0("register")
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    let py_receivers = PyDict::new(py);
-
-                    let inputs_ids = inputs.keys().cloned().collect::<Vec<_>>();
-                    for id in &inputs_ids {
-                        let input = inputs
-                            .take_raw(id)
-                            .ok_or_else(|| zferror!(ErrorKind::MissingInput(id.to_string())))?;
-                        let pyo3_rx = PyInput::from(input);
-                        py_receivers
-                            .set_item(PyString::new(py, id), &pyo3_rx.into_py(py))
-                            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-                    }
+                    let py_receivers =
+                        inputs_into_py(py, inputs).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                     // Setting asyncio event loop
                     let asyncio = py.import("asyncio").unwrap();
