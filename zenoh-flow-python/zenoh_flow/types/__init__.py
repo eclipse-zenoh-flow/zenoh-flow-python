@@ -196,6 +196,21 @@ class Inputs:
             return None
         in_stream = Input(in_stream, input_type, deserializer)
 
+    def take_raw(self,  port_id: str) -> InnerInput:
+        """
+        Returns the InnerInput associated to the provided `port_id`,
+        if one is associated, otherwise `None` is returned.
+
+        A InnerInput receives bytes not typed data
+
+        Args:
+            port_id (str): Id associated with the input
+
+        Returns:
+            InnerInput: The raw associated input
+        """
+        return self.__inputs.get(port_id, None)
+
 
 class Outputs:
     """
@@ -224,4 +239,19 @@ class Outputs:
         if out_stream is None:
             return None
         out_stream = Output(out_stream, output_type, serializer)
+
+    def take_raw(self,  port_id: str) -> InnerOutput:
+        """
+        Returns the InnerOutput associated to the provided `port_id`,
+        if one is associated, otherwise `None` is returned.
+
+        A InnerOutput receives bytes not typed data
+
+        Args:
+            port_id (str): Id associated with the output
+
+        Returns:
+            InnerOutput: The raw associated output
+        """
+        return self.__outputs.get(port_id, None)
 
