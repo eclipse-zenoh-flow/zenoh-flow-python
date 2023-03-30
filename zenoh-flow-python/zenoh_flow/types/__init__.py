@@ -13,7 +13,7 @@
 #
 
 
-from zenoh_flow import InnerInput, InnerOutput
+from zenoh_flow import RawInput, RawOutput
 from typing import Callable, Any, TypeVar, Optional, Dict
 
 
@@ -90,7 +90,7 @@ class DataMessage:
 
     def get_data(self) -> Any:
         """
-        Returns a reference over bytes representing the data.
+        Returns the typed data.
         """
         return self.__data
 
@@ -111,7 +111,7 @@ class Input:
     """
     Channel that receives data from upstream nodes.
     """
-    def __init__(self, inner: InnerInput, input_type: T, deserializer: Callable[[bytes], T]):
+    def __init__(self, inner: RawInput, input_type: T, deserializer: Callable[[bytes], T]):
         self.__deserializer = deserializer
         self.__inner = inner
         self.__type = input_type
@@ -142,13 +142,13 @@ class Output:
     """
     Channels that sends data to downstream nodes.
     """
-    def __init__(self, inner: InnerOutput, output_type: T, serializer: Callable[[T], bytes]):
+    def __init__(self, inner: RawOutput, output_type: T, serializer: Callable[[T], bytes]):
         self.__serializer = serializer
         self.__inner = inner
         self.__type = output_type
 
     async def send(self, data: T, ts: Optional[int] = None):
-        """_summary_
+        """
         Send, *asynchronously*, the data on all channels.
 
         If no timestamp is provided, the current timestamp
@@ -173,7 +173,7 @@ class Inputs:
      The `Inputs` structure contains all the receiving channels
      we created for a `Sink` or an `Operator`.
     """
-    def __init__(self, inputs: Dict[str, InnerInput]):
+    def __init__(self, inputs: Dict[str, RawInput]):
         self.__inputs = inputs
 
     def take(self, port_id: str, input_type: T,  deserializer: Callable[[bytes], T]) -> Input:
@@ -197,18 +197,18 @@ class Inputs:
         in_stream = Input(in_stream, input_type, deserializer)
         return in_stream
 
-    def take_raw(self,  port_id: str) -> InnerInput:
+    def take_raw(self,  port_id: str) -> RawInput:
         """
-        Returns the InnerInput associated to the provided `port_id`,
+        Returns the RawInput associated to the provided `port_id`,
         if one is associated, otherwise `None` is returned.
 
-        A InnerInput receives bytes not typed data
+        A RawInput receives bytes not typed data
 
         Args:
             port_id (str): Id associated with the input
 
         Returns:
-            InnerInput: The raw associated input
+            RawInput: The raw associated input
         """
         return self.__inputs.get(port_id, None)
 
@@ -224,7 +224,7 @@ class Outputs:
     The `Outputs` structure contains all the sender channels
     we created for a `Source` or an `Operator`.
     """
-    def __init__(self, outputs: Dict[str, InnerOutput]):
+    def __init__(self, outputs: Dict[str, RawOutput]):
         self.__outputs = outputs
 
     def take(self, port_id: str, output_type: T,  serializer: Callable[[T], bytes]) -> Output:
@@ -248,18 +248,18 @@ class Outputs:
         out_stream = Output(out_stream, output_type, serializer)
         return out_stream
 
-    def take_raw(self,  port_id: str) -> InnerOutput:
+    def take_raw(self,  port_id: str) -> RawOutput:
         """
-        Returns the InnerOutput associated to the provided `port_id`,
+        Returns the RawOutput associated to the provided `port_id`,
         if one is associated, otherwise `None` is returned.
 
-        A InnerOutput receives bytes not typed data
+        A RawOutput receives bytes not typed data
 
         Args:
             port_id (str): Id associated with the output
 
         Returns:
-            InnerOutput: The raw associated output
+            RawOutput: The raw associated output
         """
         return self.__outputs.get(port_id, None)
 

@@ -30,6 +30,17 @@ DataMessage
 .. autoclass:: zenoh_flow.DataMessage
     :members:
 
+
+Outputs
+----------
+.. autoclass:: zenoh_flow.types.Outputs
+    :members:
+
+Inputs
+------------
+.. autoclass:: zenoh_flow.types.Inputs
+    :members:
+
 Context
 -------
 .. autoclass:: zenoh_flow.types.Context
@@ -38,4 +49,21 @@ Context
 Timestamp
 ---------
 .. autoclass:: zenoh_flow.types.Timestamp
+    :members:
+
+
+RawOutput
+----------
+.. autoclass:: zenoh_flow.RawOutput
+    :members:
+
+RawInput
+------------
+.. autoclass:: zenoh_flow.RawInput
+    :members:
+
+
+RawDataMessage
+--------------
+.. autoclass:: zenoh_flow.RawDataMessage
     :members:

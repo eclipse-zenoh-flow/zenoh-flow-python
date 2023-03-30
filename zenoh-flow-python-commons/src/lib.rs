@@ -149,16 +149,16 @@ pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObj
 }
 
 pub fn inputs_into_py(py: Python, mut inputs: Inputs) -> PyResult<PyObject> {
-    let py_zenoh_flow = py.import("zenoh_flow").unwrap();
+    let py_zenoh_flow = py.import("zenoh_flow")?;
 
     let py_receivers = PyDict::new(py);
     let inputs_ids = inputs.keys().cloned().collect::<Vec<_>>();
     for id in &inputs_ids {
-        let input = inputs.take_raw(id).unwrap(); // FIXME
-                                                  // .ok_or_else(|| zferror!(ErrorKind::MissingInput(id.to_string())))?;
-        let pyo3_rx = InnerInput::from(input);
+        let input = inputs.take_raw(id).ok_or(PyValueError::new_err(format!("Unable to find input {id}")))?;
+
+        let pyo3_rx = RawInput::from(input);
         py_receivers.set_item(PyString::new(py, id), &pyo3_rx.into_py(py))?;
-        // .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+
     }
 
     let py_inputs = py_zenoh_flow.getattr("Inputs")?.call1((py_receivers,))?;
@@ -166,14 +166,13 @@ pub fn inputs_into_py(py: Python, mut inputs: Inputs) -> PyResult<PyObject> {
 }
 
 pub fn outputs_into_py(py: Python, mut outputs: Outputs) -> PyResult<PyObject> {
-    let py_zenoh_flow = py.import("zenoh_flow").unwrap();
+    let py_zenoh_flow = py.import("zenoh_flow")?;
 
     let py_senders = PyDict::new(py);
     let outputs_ids = outputs.keys().cloned().collect::<Vec<_>>();
     for id in &outputs_ids {
-        let output = outputs.take_raw(id).unwrap();
-        // .ok_or_else(|| zferror!(ErrorKind::MissingOutput(id.to_string())))?;
-        let pyo3_tx = InnerOutput::from(output);
+        let output = outputs.take_raw(id).ok_or(PyValueError::new_err(format!("Unable to find output {id}")))?;
+        let pyo3_tx = RawOutput::from(output);
         py_senders.set_item(PyString::new(py, id), &pyo3_tx.into_py(py))?;
     }
 
@@ -183,13 +182,13 @@ pub fn outputs_into_py(py: Python, mut outputs: Outputs) -> PyResult<PyObject> {
 
 /// Channels that sends data to downstream nodes.
 #[pyclass]
-pub struct InnerOutput {
+pub struct RawOutput {
     pub(crate) sender: Arc<ZOutput>,
 }
 
 #[pymethods]
-impl InnerOutput {
-    /// Send, *asynchronously*, the `DataMessage` on all channels.
+impl RawOutput {
+    /// Send, *asynchronously*, the bytes on all channels.
     ///
     /// If no timestamp is provided, the current timestamp — as per the HLC — is taken.
     ///
@@ -219,7 +218,7 @@ impl InnerOutput {
     }
 }
 
-impl From<ZOutput> for InnerOutput {
+impl From<ZOutput> for RawOutput {
     fn from(other: ZOutput) -> Self {
         Self {
             sender: Arc::new(other),
@@ -227,7 +226,7 @@ impl From<ZOutput> for InnerOutput {
     }
 }
 
-impl From<&ZOutput> for InnerOutput {
+impl From<&ZOutput> for RawOutput {
     fn from(other: &ZOutput) -> Self {
         Self {
             sender: Arc::new(other.clone()),
@@ -237,16 +236,16 @@ impl From<&ZOutput> for InnerOutput {
 
 /// Channels that receives data from upstream nodes.
 #[pyclass(subclass)]
-pub struct InnerInput {
+pub struct RawInput {
     pub(crate) receiver: Arc<ZInput>,
 }
 
 #[pymethods]
-impl InnerInput {
-    /// Returns the first `DataMessage` that was received, *asynchronously*, on any of the channels
+impl RawInput {
+    /// Returns the first `RawDataMessage` that was received, *asynchronously*, on any of the channels
     /// associated with this Input.
     ///
-    /// If several `DataMessage` are received at the same time, one is randomly selected.
+    /// If several `RawDataMessage` are received at the same time, one is randomly selected.
     pub fn recv<'p>(&'p self, py: Python<'p>) -> PyResult<&'p PyAny> {
         let c_receiver = self.receiver.clone();
         pyo3_asyncio::async_std::future_into_py(py, async move {
@@ -254,7 +253,7 @@ impl InnerInput {
                 .recv()
                 .await
                 .map_err(|_| PyValueError::new_err("Unable to receive data"))?;
-            InnerDataMessage::try_from(rust_msg)
+            RawDataMessage::try_from(rust_msg)
         })
     }
 
@@ -265,7 +264,7 @@ impl InnerInput {
     }
 }
 
-impl From<ZInput> for InnerInput {
+impl From<ZInput> for RawInput {
     fn from(other: ZInput) -> Self {
         Self {
             receiver: Arc::new(other),
@@ -273,7 +272,7 @@ impl From<ZInput> for InnerInput {
     }
 }
 
-impl From<&ZInput> for InnerInput {
+impl From<&ZInput> for RawInput {
     fn from(other: &ZInput) -> Self {
         Self {
             receiver: Arc::new(other.clone()),
@@ -281,7 +280,7 @@ impl From<&ZInput> for InnerInput {
     }
 }
 
-impl TryInto<ZInput> for InnerInput {
+impl TryInto<ZInput> for RawInput {
     type Error = zenoh_flow::prelude::Error;
 
     fn try_into(self) -> Result<ZInput, Self::Error> {
@@ -299,15 +298,15 @@ impl TryInto<ZInput> for InnerInput {
 /// It contains the actual data, the timestamp associated, and
 /// information whether the message is a `Watermark`
 #[pyclass(subclass)]
-pub struct InnerDataMessage {
+pub struct RawDataMessage {
     data: Py<PyBytes>,
     ts: Py<PyLong>,
     is_watermark: bool,
 }
 
 #[pymethods]
-impl InnerDataMessage {
-    /// Creates a new [`DataMessage`](`DataMessage`) with given bytes,
+impl RawDataMessage {
+    /// Creates a new [`RawDataMessage`](`RawDataMessage`) with given bytes,
     ///  timestamp and watermark flag.
     #[new]
     pub fn new(data: Py<PyBytes>, ts: Py<PyLong>, is_watermark: bool) -> Self {
@@ -330,14 +329,14 @@ impl InnerDataMessage {
         &self.ts
     }
 
-    /// Returns whether the `DataMessage` is a watermark or not.
+    /// Returns whether the `RawDataMessage` is a watermark or not.
     #[getter]
     pub fn is_watermark(&self) -> bool {
         self.is_watermark
     }
 }
 
-impl TryFrom<ZFMessage> for InnerDataMessage {
+impl TryFrom<ZFMessage> for RawDataMessage {
     type Error = PyErr;
 
     fn try_from(other: ZFMessage) -> Result<Self, Self::Error> {
