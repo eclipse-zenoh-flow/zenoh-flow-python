@@ -154,11 +154,12 @@ pub fn inputs_into_py(py: Python, mut inputs: Inputs) -> PyResult<PyObject> {
     let py_receivers = PyDict::new(py);
     let inputs_ids = inputs.keys().cloned().collect::<Vec<_>>();
     for id in &inputs_ids {
-        let input = inputs.take_raw(id).ok_or(PyValueError::new_err(format!("Unable to find input {id}")))?;
+        let input = inputs
+            .take_raw(id)
+            .ok_or_else(|| PyValueError::new_err(format!("Unable to find input {id}")))?;
 
         let pyo3_rx = RawInput::from(input);
         py_receivers.set_item(PyString::new(py, id), &pyo3_rx.into_py(py))?;
-
     }
 
     let py_inputs = py_zenoh_flow.getattr("Inputs")?.call1((py_receivers,))?;
@@ -171,7 +172,9 @@ pub fn outputs_into_py(py: Python, mut outputs: Outputs) -> PyResult<PyObject> {
     let py_senders = PyDict::new(py);
     let outputs_ids = outputs.keys().cloned().collect::<Vec<_>>();
     for id in &outputs_ids {
-        let output = outputs.take_raw(id).ok_or(PyValueError::new_err(format!("Unable to find output {id}")))?;
+        let output = outputs
+            .take_raw(id)
+            .ok_or_else(|| PyValueError::new_err(format!("Unable to find output {id}")))?;
         let pyo3_tx = RawOutput::from(output);
         py_senders.set_item(PyString::new(py, id), &pyo3_tx.into_py(py))?;
     }
