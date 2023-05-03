@@ -24,8 +24,9 @@ use zenoh_flow::bail;
 
 use zenoh_flow::prelude::{
     zferror, Configuration, Context as ZFContext, Error, ErrorKind, InputRaw as ZInput, Inputs,
-    OutputRaw as ZOutput, Outputs, Payload,
+    OutputRaw as ZOutput, Outputs
 };
+use zenoh_flow::types::Payload;
 use zenoh_flow::types::LinkMessage as ZFMessage;
 
 use std::sync::Arc;
@@ -155,8 +156,9 @@ pub fn inputs_into_py(py: Python, mut inputs: Inputs) -> PyResult<PyObject> {
     let inputs_ids = inputs.keys().cloned().collect::<Vec<_>>();
     for id in &inputs_ids {
         let input = inputs
-            .take_raw(id)
-            .ok_or_else(|| PyValueError::new_err(format!("Unable to find input {id}")))?;
+            .take(id)
+            .ok_or_else(|| PyValueError::new_err(format!("Unable to find input {id}")))?
+            .raw();
 
         let pyo3_rx = RawInput::from(input);
         py_receivers.set_item(PyString::new(py, id), &pyo3_rx.into_py(py))?;
@@ -173,8 +175,9 @@ pub fn outputs_into_py(py: Python, mut outputs: Outputs) -> PyResult<PyObject> {
     let outputs_ids = outputs.keys().cloned().collect::<Vec<_>>();
     for id in &outputs_ids {
         let output = outputs
-            .take_raw(id)
-            .ok_or_else(|| PyValueError::new_err(format!("Unable to find output {id}")))?;
+            .take(id)
+            .ok_or_else(|| PyValueError::new_err(format!("Unable to find output {id}")))?
+            .raw();
         let pyo3_tx = RawOutput::from(output);
         py_senders.set_item(PyString::new(py, id), &pyo3_tx.into_py(py))?;
     }
@@ -344,10 +347,9 @@ impl TryFrom<ZFMessage> for RawDataMessage {
 
     fn try_from(other: ZFMessage) -> Result<Self, Self::Error> {
         match other {
-            ZFMessage::Data(mut msg) => {
+            ZFMessage::Data(msg) => {
                 let data = Python::with_gil(|py| {
                     let bytes = msg
-                        .get_inner_data()
                         .try_as_bytes()
                         .map_err(|e| PyValueError::new_err(format!("try_as_bytes field: {e}")))?;
 
