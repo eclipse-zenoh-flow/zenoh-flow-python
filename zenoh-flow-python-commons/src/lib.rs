@@ -24,10 +24,10 @@ use zenoh_flow::bail;
 
 use zenoh_flow::prelude::{
     zferror, Configuration, Context as ZFContext, Error, ErrorKind, InputRaw as ZInput, Inputs,
-    OutputRaw as ZOutput, Outputs
+    OutputRaw as ZOutput, Outputs,
 };
-use zenoh_flow::types::Payload;
 use zenoh_flow::types::LinkMessage as ZFMessage;
+use zenoh_flow::types::Payload;
 
 use std::sync::Arc;
 
