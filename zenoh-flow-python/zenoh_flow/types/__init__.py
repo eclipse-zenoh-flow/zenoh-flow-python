@@ -30,11 +30,7 @@ class Context(object):
     """
 
     def __init__(
-        self,
-        runtime_name: str,
-        runtime_uuid: str,
-        flow_name: str,
-        instance_uuid: str
+        self, runtime_name: str, runtime_uuid: str, flow_name: str, instance_uuid: str
     ):
         self.runtime_name = runtime_name
         """Name of the runtime where the node is running."""
@@ -77,13 +73,15 @@ class Timestamp(object):
         return f"Timestamp(ntp={self.ntp}, id={self.id})"
 
 
-class DataMessage:
+class Message:
     """
     Zenoh Flow data messages
     It contains the actual data, the timestamp associated, and
     information whether the message is a `Watermark`
+    If the message is a `Watermark` the data is an empty list.
     """
-    def __init__(self, data: Any, ts: int,  watermark: bool):
+
+    def __init__(self, data: Any, ts: int, watermark: bool):
         self.__data = data
         self.__ts = ts
         self.__watermark = watermark
@@ -91,6 +89,7 @@ class DataMessage:
     def get_data(self) -> Any:
         """
         Returns the typed data.
+        If the message is a `Watermark` the data is an empty list.
         """
         return self.__data
 
@@ -111,12 +110,15 @@ class Input:
     """
     Channel that receives data from upstream nodes.
     """
-    def __init__(self, inner: RawInput, input_type: T, deserializer: Callable[[bytes], T]):
+
+    def __init__(
+        self, inner: RawInput, input_type: T, deserializer: Callable[[bytes], T]
+    ):
         self.__deserializer = deserializer
         self.__inner = inner
         self.__type = input_type
 
-    async def recv(self) -> DataMessage:
+    async def recv(self) -> Message:
         """
         Returns the first `DataMessage` that was received, *asynchronously*,
         on any of the channels associated with this Input.
@@ -128,7 +130,7 @@ class Input:
         data = None
         if len(data_msg.data) > 0:
             data = self.__deserializer(data_msg.data)
-        msg = DataMessage(data, data_msg.ts, data_msg.is_watermark)
+        msg = Message(data, data_msg.ts, data_msg.is_watermark)
         return msg
 
     def port_id(self) -> str:
@@ -142,7 +144,10 @@ class Output:
     """
     Channels that sends data to downstream nodes.
     """
-    def __init__(self, inner: RawOutput, output_type: T, serializer: Callable[[T], bytes]):
+
+    def __init__(
+        self, inner: RawOutput, output_type: T, serializer: Callable[[T], bytes]
+    ):
         self.__serializer = serializer
         self.__inner = inner
         self.__type = output_type
@@ -170,13 +175,16 @@ class Output:
 
 class Inputs:
     """
-     The `Inputs` structure contains all the receiving channels
-     we created for a `Sink` or an `Operator`.
+    The `Inputs` structure contains all the receiving channels
+    we created for a `Sink` or an `Operator`.
     """
+
     def __init__(self, inputs: Dict[str, RawInput]):
         self.__inputs = inputs
 
-    def take(self, port_id: str, input_type: T,  deserializer: Callable[[bytes], T]) -> Input:
+    def take(
+        self, port_id: str, input_type: T, deserializer: Callable[[bytes], T]
+    ) -> Input:
         """
         Returns the typed `Input` associated to the provided `port_id`,
         if one is associated, otherwise `None` is returned.
@@ -197,7 +205,7 @@ class Inputs:
         in_stream = Input(in_stream, input_type, deserializer)
         return in_stream
 
-    def take_raw(self,  port_id: str) -> RawInput:
+    def take_raw(self, port_id: str) -> RawInput:
         """
         Returns the RawInput associated to the provided `port_id`,
         if one is associated, otherwise `None` is returned.
@@ -224,10 +232,13 @@ class Outputs:
     The `Outputs` structure contains all the sender channels
     we created for a `Source` or an `Operator`.
     """
+
     def __init__(self, outputs: Dict[str, RawOutput]):
         self.__outputs = outputs
 
-    def take(self, port_id: str, output_type: T,  serializer: Callable[[T], bytes]) -> Output:
+    def take(
+        self, port_id: str, output_type: T, serializer: Callable[[T], bytes]
+    ) -> Output:
         """
 
         Returns the typed `Output` associated to the provided `port_id`,
@@ -248,7 +259,7 @@ class Outputs:
         out_stream = Output(out_stream, output_type, serializer)
         return out_stream
 
-    def take_raw(self,  port_id: str) -> RawOutput:
+    def take_raw(self, port_id: str) -> RawOutput:
         """
         Returns the RawOutput associated to the provided `port_id`,
         if one is associated, otherwise `None` is returned.

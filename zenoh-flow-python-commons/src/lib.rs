@@ -259,7 +259,7 @@ impl RawInput {
                 .recv()
                 .await
                 .map_err(|_| PyValueError::new_err("Unable to receive data"))?;
-            RawDataMessage::try_from(rust_msg)
+            RawMessage::try_from(rust_msg)
         })
     }
 
@@ -304,14 +304,14 @@ impl TryInto<ZInput> for RawInput {
 /// It contains the actual data, the timestamp associated, and
 /// information whether the message is a `Watermark`
 #[pyclass(subclass)]
-pub struct RawDataMessage {
+pub struct RawMessage {
     data: Py<PyBytes>,
     ts: Py<PyLong>,
     is_watermark: bool,
 }
 
 #[pymethods]
-impl RawDataMessage {
+impl RawMessage {
     /// Creates a new [`RawDataMessage`](`RawDataMessage`) with given bytes,
     ///  timestamp and watermark flag.
     #[new]
@@ -342,7 +342,7 @@ impl RawDataMessage {
     }
 }
 
-impl TryFrom<ZFMessage> for RawDataMessage {
+impl TryFrom<ZFMessage> for RawMessage {
     type Error = PyErr;
 
     fn try_from(other: ZFMessage) -> Result<Self, Self::Error> {
