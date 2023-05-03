@@ -75,10 +75,10 @@ class Timestamp(object):
 
 class Message:
     """
-    Zenoh Flow data messages
-    It contains the actual data, the timestamp associated, and
-    information whether the message is a `Watermark`
-    If the message is a `Watermark` the data is an empty list.
+    A Zenoh-Flow message: a timestamp and optional data.
+
+    If the message is a `Watermark` then no data is associated and
+    `get_data` will return an empty list.
     """
 
     def __init__(self, data: Any, ts: int, watermark: bool):

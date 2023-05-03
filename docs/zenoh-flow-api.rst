@@ -25,9 +25,9 @@ Input
 .. autoclass:: zenoh_flow.Input
     :members:
 
-DataMessage
+Message
 -----------
-.. autoclass:: zenoh_flow.DataMessage
+.. autoclass:: zenoh_flow.Message
     :members:
 
 
@@ -63,7 +63,7 @@ RawInput
     :members:
 
 
-RawDataMessage
+RawMessage
 --------------
-.. autoclass:: zenoh_flow.RawDataMessage
+.. autoclass:: zenoh_flow.RawMessage
     :members:
