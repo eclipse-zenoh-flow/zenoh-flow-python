@@ -13,7 +13,6 @@
 //
 
 use async_trait::async_trait;
-use pyo3::types::{PyDict, PyString};
 use pyo3::{prelude::*, types::PyModule};
 use pyo3_asyncio::TaskLocals;
 use std::fs;
@@ -21,8 +20,8 @@ use std::path::Path;
 use std::sync::Arc;
 use zenoh_flow::prelude::*;
 use zenoh_flow_python_commons::{
-    configuration_into_py, context_into_py, from_pyerr_to_zferr, Input as PyInput,
-    Output as PyOutput, PythonState,
+    configuration_into_py, context_into_py, from_pyerr_to_zferr, inputs_into_py, outputs_into_py,
+    PythonState,
 };
 
 #[cfg(target_family = "unix")]
@@ -48,8 +47,8 @@ impl Operator for PyOperator {
     async fn new(
         ctx: Context,
         configuration: Option<Configuration>,
-        mut inputs: Inputs,
-        mut outputs: Outputs,
+        inputs: Inputs,
+        outputs: Outputs,
     ) -> Result<Self> {
         let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
 
@@ -83,31 +82,11 @@ impl Operator for PyOperator {
                         .call_method0("register")
                         .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    let py_receivers = PyDict::new(py);
+                    let py_receivers =
+                        inputs_into_py(py, inputs).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    let inputs_ids = inputs.keys().cloned().collect::<Vec<_>>();
-                    for id in &inputs_ids {
-                        let input = inputs
-                            .take_raw(id)
-                            .ok_or_else(|| zferror!(ErrorKind::MissingInput(id.to_string())))?;
-                        let pyo3_rx = PyInput::from(input);
-                        py_receivers
-                            .set_item(PyString::new(py, id), &pyo3_rx.into_py(py))
-                            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-                    }
-
-                    let py_senders = PyDict::new(py);
-
-                    let outputs_ids = outputs.keys().cloned().collect::<Vec<_>>();
-                    for id in &outputs_ids {
-                        let output = outputs
-                            .take_raw(id)
-                            .ok_or_else(|| zferror!(ErrorKind::MissingOutput(id.to_string())))?;
-                        let pyo3_tx = PyOutput::from(output);
-                        py_senders
-                            .set_item(PyString::new(py, id), &pyo3_tx.into_py(py))
-                            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-                    }
+                    let py_senders =
+                        outputs_into_py(py, outputs).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
                     // Setting asyncio event loop
                     let asyncio = py.import("asyncio").unwrap();

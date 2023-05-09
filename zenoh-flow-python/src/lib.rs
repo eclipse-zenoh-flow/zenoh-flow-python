@@ -13,12 +13,12 @@
 //
 
 use pyo3::prelude::*;
-use zenoh_flow_python_commons::{DataMessage, Input, Output};
+use zenoh_flow_python_commons::{RawInput, RawMessage, RawOutput};
 
 #[pymodule]
 fn zenoh_flow(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_class::<Output>()?;
-    m.add_class::<Input>()?;
-    m.add_class::<DataMessage>()?;
+    m.add_class::<RawOutput>()?;
+    m.add_class::<RawInput>()?;
+    m.add_class::<RawMessage>()?;
     Ok(())
 }

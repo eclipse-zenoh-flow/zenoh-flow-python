@@ -12,7 +12,7 @@
 #   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 #
 
-from zenoh_flow import Input
+from zenoh_flow import Inputs
 from zenoh_flow.types import Context
 from typing import Dict, Any
 
@@ -31,14 +31,14 @@ class Sink(object):
     :param configuration: Configuration
     :type configuration: dict
     :param inputs: The input streams
-    :type inputs: :class:`Dict[str, Input]`
+    :type inputs: :class:`Inputs`
     """
 
     def __init__(
         self,
         context: Context,
         configuration: Dict[str, Any],
-        inputs: Dict[str, Input],
+        inputs: Inputs,
     ):
         """
         The `__init__` method is called by the Zenoh Flow runtime.
@@ -51,7 +51,7 @@ class Sink(object):
         :param configuration: Configuration
         :type configuration: dict
         :param inputs: The input streams
-        :type inputs: :class:`Dict[str, Input]`
+        :type inputs: :class:`Inputs`
 
         :rtype: None
         """

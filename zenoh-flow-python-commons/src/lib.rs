@@ -23,10 +23,11 @@ use std::convert::{TryFrom, TryInto};
 use zenoh_flow::bail;
 
 use zenoh_flow::prelude::{
-    zferror, Configuration, Context as ZFContext, Error, ErrorKind, InputRaw as ZInput,
-    OutputRaw as ZOutput, Payload,
+    zferror, Configuration, Context as ZFContext, Error, ErrorKind, InputRaw as ZInput, Inputs,
+    OutputRaw as ZOutput, Outputs,
 };
 use zenoh_flow::types::LinkMessage as ZFMessage;
+use zenoh_flow::types::Payload;
 
 use std::sync::Arc;
 
@@ -148,15 +149,52 @@ pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObj
     }
 }
 
+pub fn inputs_into_py(py: Python, mut inputs: Inputs) -> PyResult<PyObject> {
+    let py_zenoh_flow = py.import("zenoh_flow")?;
+
+    let py_receivers = PyDict::new(py);
+    let inputs_ids = inputs.keys().cloned().collect::<Vec<_>>();
+    for id in &inputs_ids {
+        let input = inputs
+            .take(id)
+            .ok_or_else(|| PyValueError::new_err(format!("Unable to find input {id}")))?
+            .raw();
+
+        let pyo3_rx = RawInput::from(input);
+        py_receivers.set_item(PyString::new(py, id), &pyo3_rx.into_py(py))?;
+    }
+
+    let py_inputs = py_zenoh_flow.getattr("Inputs")?.call1((py_receivers,))?;
+    Ok(py_inputs.to_object(py))
+}
+
+pub fn outputs_into_py(py: Python, mut outputs: Outputs) -> PyResult<PyObject> {
+    let py_zenoh_flow = py.import("zenoh_flow")?;
+
+    let py_senders = PyDict::new(py);
+    let outputs_ids = outputs.keys().cloned().collect::<Vec<_>>();
+    for id in &outputs_ids {
+        let output = outputs
+            .take(id)
+            .ok_or_else(|| PyValueError::new_err(format!("Unable to find output {id}")))?
+            .raw();
+        let pyo3_tx = RawOutput::from(output);
+        py_senders.set_item(PyString::new(py, id), &pyo3_tx.into_py(py))?;
+    }
+
+    let py_outputs = py_zenoh_flow.getattr("Outputs")?.call1((py_senders,))?;
+    Ok(py_outputs.to_object(py))
+}
+
 /// Channels that sends data to downstream nodes.
 #[pyclass]
-pub struct Output {
+pub struct RawOutput {
     pub(crate) sender: Arc<ZOutput>,
 }
 
 #[pymethods]
-impl Output {
-    /// Send, *asynchronously*, the `DataMessage` on all channels.
+impl RawOutput {
+    /// Send, *asynchronously*, the bytes on all channels.
     ///
     /// If no timestamp is provided, the current timestamp — as per the HLC — is taken.
     ///
@@ -186,7 +224,7 @@ impl Output {
     }
 }
 
-impl From<ZOutput> for Output {
+impl From<ZOutput> for RawOutput {
     fn from(other: ZOutput) -> Self {
         Self {
             sender: Arc::new(other),
@@ -194,7 +232,7 @@ impl From<ZOutput> for Output {
     }
 }
 
-impl From<&ZOutput> for Output {
+impl From<&ZOutput> for RawOutput {
     fn from(other: &ZOutput) -> Self {
         Self {
             sender: Arc::new(other.clone()),
@@ -204,16 +242,16 @@ impl From<&ZOutput> for Output {
 
 /// Channels that receives data from upstream nodes.
 #[pyclass(subclass)]
-pub struct Input {
+pub struct RawInput {
     pub(crate) receiver: Arc<ZInput>,
 }
 
 #[pymethods]
-impl Input {
-    /// Returns the first `DataMessage` that was received, *asynchronously*, on any of the channels
+impl RawInput {
+    /// Returns the first `RawDataMessage` that was received, *asynchronously*, on any of the channels
     /// associated with this Input.
     ///
-    /// If several `DataMessage` are received at the same time, one is randomly selected.
+    /// If several `RawDataMessage` are received at the same time, one is randomly selected.
     pub fn recv<'p>(&'p self, py: Python<'p>) -> PyResult<&'p PyAny> {
         let c_receiver = self.receiver.clone();
         pyo3_asyncio::async_std::future_into_py(py, async move {
@@ -221,7 +259,7 @@ impl Input {
                 .recv()
                 .await
                 .map_err(|_| PyValueError::new_err("Unable to receive data"))?;
-            DataMessage::try_from(rust_msg)
+            RawMessage::try_from(rust_msg)
         })
     }
 
@@ -232,7 +270,7 @@ impl Input {
     }
 }
 
-impl From<ZInput> for Input {
+impl From<ZInput> for RawInput {
     fn from(other: ZInput) -> Self {
         Self {
             receiver: Arc::new(other),
@@ -240,7 +278,7 @@ impl From<ZInput> for Input {
     }
 }
 
-impl From<&ZInput> for Input {
+impl From<&ZInput> for RawInput {
     fn from(other: &ZInput) -> Self {
         Self {
             receiver: Arc::new(other.clone()),
@@ -248,7 +286,7 @@ impl From<&ZInput> for Input {
     }
 }
 
-impl TryInto<ZInput> for Input {
+impl TryInto<ZInput> for RawInput {
     type Error = zenoh_flow::prelude::Error;
 
     fn try_into(self) -> Result<ZInput, Self::Error> {
@@ -266,15 +304,15 @@ impl TryInto<ZInput> for Input {
 /// It contains the actual data, the timestamp associated, and
 /// information whether the message is a `Watermark`
 #[pyclass(subclass)]
-pub struct DataMessage {
+pub struct RawMessage {
     data: Py<PyBytes>,
     ts: Py<PyLong>,
     is_watermark: bool,
 }
 
 #[pymethods]
-impl DataMessage {
-    /// Creates a new [`DataMessage`](`DataMessage`) with given bytes,
+impl RawMessage {
+    /// Creates a new [`RawDataMessage`](`RawDataMessage`) with given bytes,
     ///  timestamp and watermark flag.
     #[new]
     pub fn new(data: Py<PyBytes>, ts: Py<PyLong>, is_watermark: bool) -> Self {
@@ -297,22 +335,21 @@ impl DataMessage {
         &self.ts
     }
 
-    /// Returns whether the `DataMessage` is a watermark or not.
+    /// Returns whether the `RawDataMessage` is a watermark or not.
     #[getter]
     pub fn is_watermark(&self) -> bool {
         self.is_watermark
     }
 }
 
-impl TryFrom<ZFMessage> for DataMessage {
+impl TryFrom<ZFMessage> for RawMessage {
     type Error = PyErr;
 
     fn try_from(other: ZFMessage) -> Result<Self, Self::Error> {
         match other {
-            ZFMessage::Data(mut msg) => {
+            ZFMessage::Data(msg) => {
                 let data = Python::with_gil(|py| {
                     let bytes = msg
-                        .get_inner_data()
                         .try_as_bytes()
                         .map_err(|e| PyValueError::new_err(format!("try_as_bytes field: {e}")))?;
 

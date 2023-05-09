@@ -13,7 +13,7 @@
 #
 
 
-from zenoh_flow import Output
+from zenoh_flow import Outputs
 from zenoh_flow.types import Context
 from typing import Any, Dict
 
@@ -32,7 +32,7 @@ class Source(object):
     :param configuration: Configuration
     :type configuration: dict
     :param outputs: The output streams
-    :type outputs: :class:`Dict[str, Output]`
+    :type outputs: :class:`Outputs`
 
     """
 
@@ -40,7 +40,7 @@ class Source(object):
         self,
         context: Context,
         configuration: Dict[str, Any],
-        outputs: Dict[str, Output],
+        outputs: Outputs,
     ):
         """
         The `__init__` method is called by the zenoh flow runtime.
@@ -53,7 +53,7 @@ class Source(object):
         :param configuration: Configuration
         :type configuration: dict`
         :param outputs: The output streams
-        :type outputs: :class:`Dict[str, Output]`
+        :type outputs: :class:`Outputs`
 
         :rtype: None
         """
