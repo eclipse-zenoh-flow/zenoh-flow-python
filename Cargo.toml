@@ -33,6 +33,12 @@ codegen-units = 1
 opt-level = 3
 panic = "abort"
 
-
-[patch.crates-io]
-zenoh-flow = { git = "https://github.com/eclipse-zenoh/zenoh-flow.git", branch = "master"}
+[workspace.dependencies]
+async-std = { version = "=1.12.0", features = ["attributes"] }
+async-trait = "0.1"
+libloading = "0.7"
+log = "0.4"
+pyo3 = "0.16"
+pyo3-asyncio = { version = "0.16", features = ["attributes", "async-std-runtime"] }
+pyo3-build-config = { version = "0.16", features = ["resolve-config"] }
+zenoh-flow = { version = "0.5.0-alpha.1" }

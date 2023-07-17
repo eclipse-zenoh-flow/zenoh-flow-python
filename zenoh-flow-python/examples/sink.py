@@ -13,10 +13,9 @@
 #
 
 from zenoh_flow.interfaces import Sink
-from zenoh_flow import Input
+from zenoh_flow import Inputs
 from zenoh_flow.types import Context
 from typing import Dict, Any
-import asyncio
 
 
 class MySink(Sink):
@@ -27,17 +26,13 @@ class MySink(Sink):
         self,
         context: Context,
         configuration: Dict[str, Any],
-        inputs: Dict[str, Input],
+        inputs: Inputs,
     ):
-        self.input = inputs.get("Value", None)
+        self.input = inputs.take("Value", int, lambda x: int.from_bytes(x, "big"))
 
     async def iteration(self) -> None:
         data_msg = await self.input.recv()
-        print(f"Received {int_from_bytes(data_msg.data)}")
-
-
-def int_from_bytes(xbytes: bytes) -> int:
-    return int.from_bytes(xbytes, "big")
+        print(f"Received {data_msg.data}")
 
 
 def register():

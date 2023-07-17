@@ -13,23 +13,22 @@
 #
 
 from zenoh_flow.interfaces import Operator
-from zenoh_flow import Input, Output
+from zenoh_flow import Inputs, Outputs
 from zenoh_flow.types import Context
 from typing import Dict, Any
-import asyncio
 
 
-class MyOp(Operator):
+class MyOperator(Operator):
     def __init__(
         self,
         context: Context,
         configuration: Dict[str, Any],
-        inputs: Dict[str, Input],
-        outputs: Dict[str, Output],
+        inputs: Inputs,
+        outputs: Outputs,
     ):
         print(f"Context: {context}")
-        self.output = outputs.get("Data", None)
-        self.in_stream = inputs.get("Data", None)
+        self.in_stream = inputs.take("Data", int, lambda x: int.from_bytes(x, "big"))
+        self.output = outputs.take("Data", int, lambda x: x.to_bytes((x.bit_length() + 7) // 8, "big"))
 
     def finalize(self) -> None:
         return None
@@ -45,13 +44,5 @@ class MyOp(Operator):
         return None
 
 
-def int_to_bytes(x: int) -> bytes:
-    return x.to_bytes((x.bit_length() + 7) // 8, "big")
-
-
-def int_from_bytes(xbytes: bytes) -> int:
-    return int.from_bytes(xbytes, "big")
-
-
 def register():
-    return MyOp
+    return MyOperator
