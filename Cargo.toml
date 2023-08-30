@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022 ZettaScale Technology
+# Copyright (c) 2021 - 2023 ZettaScale Technology
 #
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
@@ -13,23 +13,33 @@
 #
 
 [workspace]
-
 members = [
+  "zenoh-flow-python",
+  "zenoh-flow-python-commons",
   "zenoh-flow-python-operator-wrapper",
   "zenoh-flow-python-sink-wrapper",
   "zenoh-flow-python-source-wrapper",
-  "zenoh-flow-python",
-  "zenoh-flow-python-commons",
 ]
+
+[workspace.package]
+authors = ["ZettaScale Zenoh Team <zenoh@zettascale.tech>"]
+categories = ["api-bindings", "dataflow-programming", "network-programming"]
+description = "Zenoh-Flow Python APIs"
+edition = "2018"
+homepage = "https://github.com/ZettaScaleLabs/zenoh-flow-python"
+license = " EPL-2.0 OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/ZettaScaleLabs/zenoh-flow-python"
+version = "0.5.0-alpha.1"
 
 [profile.dev]
 debug = true
 opt-level = 0
 
 [profile.release]
+codegen-units = 1
 debug = false
 lto = "fat"
-codegen-units = 1
 opt-level = 3
 panic = "abort"
 
@@ -39,6 +49,9 @@ async-trait = "0.1"
 libloading = "0.7"
 log = "0.4"
 pyo3 = "0.16"
-pyo3-asyncio = { version = "0.16", features = ["attributes", "async-std-runtime"] }
+pyo3-asyncio = { version = "0.16", features = [
+  "async-std-runtime",
+  "attributes",
+] }
 pyo3-build-config = { version = "0.16", features = ["resolve-config"] }
 zenoh-flow = { version = "0.5.0-alpha.1" }

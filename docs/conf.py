@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022 ZettaScale Technology
+# Copyright (c) 2021 - 2023 ZettaScale Technology
 #
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
@@ -29,7 +29,7 @@ import zenoh_flow
 # -- Project information -----------------------------------------------------
 
 project = 'zenoh-flow'
-copyright = '2022, ZettaScale Technology'
+copyright = '2021 - 2023, ZettaScale Technology'
 author = 'ZettaScale Zenoh Team, <zenoh@zettascale.tech>'
 
 # The full version, including alpha/beta/rc tags

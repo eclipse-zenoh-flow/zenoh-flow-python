@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022 ZettaScale Technology
+# Copyright (c) 2021 - 2023 ZettaScale Technology
 #
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
@@ -13,16 +13,16 @@
 #
 
 [package]
-name = "zenoh-flow-python-commons"
-version = "0.5.0-alpha.1"
-authors = ["ZettaScale Zenoh Team <zenoh@zettascale.tech>"]
-categories = ["network-programming", "api-bindings"]
+authors.workspace = true
+categories.workspace = true
 description = "Zenoh-Flow Python common types and utility functions."
-edition = "2018"
-homepage = "https://github.com/ZettaScaleLabs/zenoh-flow-python"
-license = " EPL-2.0 OR Apache-2.0"
-readme = "README.md"
-repository = "https://github.com/ZettaScaleLabs/zenoh-flow-python"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+name = "zenoh-flow-python-commons"
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
 
 [dependencies]
 async-std = { workspace = true }
