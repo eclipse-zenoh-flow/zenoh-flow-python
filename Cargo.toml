@@ -30,7 +30,7 @@ homepage = "https://github.com/ZettaScaleLabs/zenoh-flow-python"
 license = " EPL-2.0 OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/ZettaScaleLabs/zenoh-flow-python"
-version = "0.5.0-alpha.1"
+version = "0.5.0-alpha.2"
 
 [profile.dev]
 debug = true
@@ -54,4 +54,4 @@ pyo3-asyncio = { version = "0.16", features = [
   "attributes",
 ] }
 pyo3-build-config = { version = "0.16", features = ["resolve-config"] }
-zenoh-flow = { version = "0.5.0-alpha.1" }
+zenoh-flow = { version = "0.5.0-alpha.2" }
