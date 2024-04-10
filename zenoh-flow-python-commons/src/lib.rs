@@ -20,14 +20,7 @@ use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PyLong, PyString};
 use std::convert::{TryFrom, TryInto};
-use zenoh_flow::bail;
-
-use zenoh_flow::prelude::{
-    zferror, Configuration, Context as ZFContext, Error, ErrorKind, InputRaw as ZInput, Inputs,
-    OutputRaw as ZOutput, Outputs,
-};
-use zenoh_flow::types::LinkMessage as ZFMessage;
-use zenoh_flow::types::Payload;
+use zenoh_flow_nodes::prelude::*;
 
 use std::sync::Arc;
 
@@ -64,57 +57,51 @@ impl std::fmt::Debug for PythonState {
     }
 }
 
-pub fn from_pyerr_to_zferr(py_err: pyo3::PyErr, py: &pyo3::Python<'_>) -> Error {
+pub fn from_pyerr_to_zferr(py_err: pyo3::PyErr, py: &pyo3::Python<'_>) -> anyhow::Error {
     let tb = if let Some(traceback) = py_err.traceback(*py) {
         traceback.format().map_or_else(|_| "".to_string(), |s| s)
     } else {
         "".to_string()
     };
 
-    zferror!(
-        ErrorKind::InvalidData,
-        "Error: {:?}\nTraceback: {:?}",
-        py_err,
-        tb
-    )
-    .into()
+    anyhow!("Error: {:?}\nTraceback: {:?}", py_err, tb)
 }
 
-pub fn from_pydwncasterr_to_zferr(py_err: pyo3::PyDowncastError) -> Error {
-    zferror!(ErrorKind::InvalidData, "Error: {:?}", py_err,).into()
+pub fn from_pydwncasterr_to_zferr(py_err: pyo3::PyDowncastError) -> anyhow::Error {
+    anyhow!("Error: {:?}", py_err)
 }
 
-pub fn context_into_py<'p>(py: &'p Python, ctx: &ZFContext) -> PyResult<&'p PyAny> {
+pub fn context_into_py<'p>(py: &'p Python, ctx: &Context) -> PyResult<&'p PyAny> {
     let py_zf_types = PyModule::import(*py, "zenoh_flow.types")?;
 
     let py_ctx = py_zf_types.getattr("Context")?.call1((
-        format!("{}", ctx.get_runtime_name()),
-        format!("{}", ctx.get_runtime_uuid()),
-        format!("{}", ctx.get_flow_name()),
-        format!("{}", ctx.get_instance_id()),
+        format!("{}", ctx.runtime_id()),
+        ctx.name().to_string(),
+        format!("{}", ctx.instance_id()),
     ))?;
 
     Ok(py_ctx)
 }
 
 pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObject> {
-    match value {
-        Configuration::Array(arr) => {
+    use serde_json::Value;
+    match *value {
+        Value::Array(ref arr) => {
             let py_list = PyList::empty(py);
             for v in arr {
-                py_list.append(configuration_into_py(py, v)?)?;
+                py_list.append(configuration_into_py(py, v.clone().into())?)?;
             }
             Ok(py_list.to_object(py))
         }
-        Configuration::Object(obj) => {
+        Value::Object(ref obj) => {
             let py_dict = PyDict::new(py);
             for (k, v) in obj {
-                py_dict.set_item(k, configuration_into_py(py, v)?)?;
+                py_dict.set_item(k, configuration_into_py(py, v.clone().into())?)?;
             }
             Ok(py_dict.to_object(py))
         }
-        Configuration::Bool(b) => Ok(b.to_object(py)),
-        Configuration::Number(n) => {
+        Value::Bool(b) => Ok(b.to_object(py)),
+        Value::Number(ref n) => {
             if n.is_i64() {
                 Ok(n.as_i64()
                     .ok_or_else(|| {
@@ -144,8 +131,8 @@ pub fn configuration_into_py(py: Python, value: Configuration) -> PyResult<PyObj
                     .to_object(py))
             }
         }
-        Configuration::String(s) => Ok(s.to_object(py)),
-        Configuration::Null => Ok(py.None()),
+        Value::String(ref s) => Ok(s.to_object(py)),
+        Value::Null => Ok(py.None()),
     }
 }
 
@@ -156,7 +143,7 @@ pub fn inputs_into_py(py: Python, mut inputs: Inputs) -> PyResult<PyObject> {
     let inputs_ids = inputs.keys().cloned().collect::<Vec<_>>();
     for id in &inputs_ids {
         let input = inputs
-            .take(id)
+            .take((*id).as_ref())
             .ok_or_else(|| PyValueError::new_err(format!("Unable to find input {id}")))?
             .raw();
 
@@ -175,7 +162,7 @@ pub fn outputs_into_py(py: Python, mut outputs: Outputs) -> PyResult<PyObject> {
     let outputs_ids = outputs.keys().cloned().collect::<Vec<_>>();
     for id in &outputs_ids {
         let output = outputs
-            .take(id)
+            .take((*id).as_ref())
             .ok_or_else(|| PyValueError::new_err(format!("Unable to find output {id}")))?
             .raw();
         let pyo3_tx = RawOutput::from(output);
@@ -189,7 +176,7 @@ pub fn outputs_into_py(py: Python, mut outputs: Outputs) -> PyResult<PyObject> {
 /// Channels that sends data to downstream nodes.
 #[pyclass]
 pub struct RawOutput {
-    pub(crate) sender: Arc<ZOutput>,
+    pub(crate) sender: Arc<OutputRaw>,
 }
 
 #[pymethods]
@@ -224,16 +211,16 @@ impl RawOutput {
     }
 }
 
-impl From<ZOutput> for RawOutput {
-    fn from(other: ZOutput) -> Self {
+impl From<OutputRaw> for RawOutput {
+    fn from(other: OutputRaw) -> Self {
         Self {
             sender: Arc::new(other),
         }
     }
 }
 
-impl From<&ZOutput> for RawOutput {
-    fn from(other: &ZOutput) -> Self {
+impl From<&OutputRaw> for RawOutput {
+    fn from(other: &OutputRaw) -> Self {
         Self {
             sender: Arc::new(other.clone()),
         }
@@ -243,7 +230,7 @@ impl From<&ZOutput> for RawOutput {
 /// Channels that receives data from upstream nodes.
 #[pyclass(subclass)]
 pub struct RawInput {
-    pub(crate) receiver: Arc<ZInput>,
+    pub(crate) receiver: Arc<InputRaw>,
 }
 
 #[pymethods]
@@ -270,30 +257,29 @@ impl RawInput {
     }
 }
 
-impl From<ZInput> for RawInput {
-    fn from(other: ZInput) -> Self {
+impl From<InputRaw> for RawInput {
+    fn from(other: InputRaw) -> Self {
         Self {
             receiver: Arc::new(other),
         }
     }
 }
 
-impl From<&ZInput> for RawInput {
-    fn from(other: &ZInput) -> Self {
+impl From<&InputRaw> for RawInput {
+    fn from(other: &InputRaw) -> Self {
         Self {
             receiver: Arc::new(other.clone()),
         }
     }
 }
 
-impl TryInto<ZInput> for RawInput {
-    type Error = zenoh_flow::prelude::Error;
+impl TryInto<InputRaw> for RawInput {
+    type Error = anyhow::Error;
 
-    fn try_into(self) -> Result<ZInput, Self::Error> {
+    fn try_into(self) -> Result<InputRaw> {
         match Arc::try_unwrap(self.receiver) {
             Ok(input) => Ok(input),
             Err(_) => bail!(
-                ErrorKind::GenericError,
                 "Cannot get Input from Python, maybe using a callback in the iteration function?"
             ),
         }
@@ -307,20 +293,14 @@ impl TryInto<ZInput> for RawInput {
 pub struct RawMessage {
     data: Py<PyBytes>,
     ts: Py<PyLong>,
-    is_watermark: bool,
 }
 
 #[pymethods]
 impl RawMessage {
-    /// Creates a new [`RawDataMessage`](`RawDataMessage`) with given bytes,
-    ///  timestamp and watermark flag.
+    /// Creates a new [`RawDataMessage`](`RawDataMessage`) with given bytes, timestamp and watermark flag.
     #[new]
-    pub fn new(data: Py<PyBytes>, ts: Py<PyLong>, is_watermark: bool) -> Self {
-        Self {
-            data,
-            ts,
-            is_watermark,
-        }
+    pub fn new(data: Py<PyBytes>, ts: Py<PyLong>) -> Self {
+        Self { data, ts }
     }
 
     /// Returns a reference over bytes representing the data.
@@ -334,62 +314,31 @@ impl RawMessage {
     pub fn get_ts(&self) -> &Py<PyLong> {
         &self.ts
     }
-
-    /// Returns whether the `RawDataMessage` is a watermark or not.
-    #[getter]
-    pub fn is_watermark(&self) -> bool {
-        self.is_watermark
-    }
 }
 
-impl TryFrom<ZFMessage> for RawMessage {
+impl TryFrom<LinkMessage> for RawMessage {
     type Error = PyErr;
 
-    fn try_from(other: ZFMessage) -> Result<Self, Self::Error> {
-        match other {
-            ZFMessage::Data(msg) => {
-                let data = Python::with_gil(|py| {
-                    let bytes = msg
-                        .try_as_bytes()
-                        .map_err(|e| PyValueError::new_err(format!("try_as_bytes field: {e}")))?;
+    fn try_from(other: LinkMessage) -> std::result::Result<Self, Self::Error> {
+        let data = Python::with_gil(|py| {
+            let bytes = other
+                .try_as_bytes()
+                .map_err(|e| PyValueError::new_err(format!("try_as_bytes field: {e}")))?;
 
-                    Ok::<pyo3::Py<PyBytes>, Self::Error>(Py::from(PyBytes::new(py, bytes.as_ref())))
-                })?;
+            Ok::<pyo3::Py<PyBytes>, Self::Error>(Py::from(PyBytes::new(py, bytes.as_ref())))
+        })?;
 
-                let ts: Py<PyLong> = Python::with_gil(|py| {
-                    Ok::<pyo3::Py<PyLong>, Self::Error>(Py::from(
-                        msg.get_timestamp()
-                            .get_time()
-                            .as_u64()
-                            .to_object(py)
-                            .cast_as::<PyLong>(py)?,
-                    ))
-                })?;
+        let ts: Py<PyLong> = Python::with_gil(|py| {
+            Ok::<pyo3::Py<PyLong>, Self::Error>(Py::from(
+                other
+                    .get_timestamp()
+                    .get_time()
+                    .as_u64()
+                    .to_object(py)
+                    .cast_as::<PyLong>(py)?,
+            ))
+        })?;
 
-                Ok(Self {
-                    data,
-                    ts,
-                    is_watermark: false,
-                })
-            }
-            ZFMessage::Watermark(ts) => {
-                let data = Python::with_gil(|py| Py::from(PyBytes::new(py, &[0u8])));
-                let ts = Python::with_gil(|py| {
-                    Ok::<pyo3::Py<PyLong>, Self::Error>(Py::from(
-                        ts.get_time()
-                            .as_u64()
-                            .to_object(py)
-                            .cast_as::<PyLong>(py)
-                            .unwrap(),
-                    ))
-                })?;
-
-                Ok(Self {
-                    data,
-                    ts,
-                    is_watermark: true,
-                })
-            }
-        }
+        Ok(Self { data, ts })
     }
 }

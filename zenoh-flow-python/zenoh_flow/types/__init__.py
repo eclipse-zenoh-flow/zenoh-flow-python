@@ -12,7 +12,6 @@
 #   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 #
 
-
 from zenoh_flow import RawInput, RawOutput
 from typing import Callable, Any, TypeVar, Optional, Dict
 
@@ -30,10 +29,8 @@ class Context(object):
     """
 
     def __init__(
-        self, runtime_name: str, runtime_uuid: str, flow_name: str, instance_uuid: str
+        self, runtime_uuid: str, flow_name: str, instance_uuid: str
     ):
-        self.runtime_name = runtime_name
-        """Name of the runtime where the node is running."""
         self.runtime_uuid = runtime_uuid
         """ UUID of the runtime where the node is running."""
         self.flow_name = flow_name
@@ -46,8 +43,7 @@ class Context(object):
 
     def __str__(self):
         return (
-            f"Context(runtime_name={self.runtime_name}, "
-            + f"runtime_uuid={self.runtime_uuid}, "
+            f"Context(runtime_uuid={self.runtime_uuid}, "
             + f"flow_name={self.flow_name}, "
             + f"instance_uuid={self.instance_uuid})"
         )
@@ -81,29 +77,9 @@ class Message:
     `get_data` will return an empty list.
     """
 
-    def __init__(self, data: Any, ts: int, watermark: bool):
-        self.__data = data
-        self.__ts = ts
-        self.__watermark = watermark
-
-    def get_data(self) -> Any:
-        """
-        Returns the typed data.
-        If the message is a `Watermark` the data is an empty list.
-        """
-        return self.__data
-
-    def get_ts(self) -> int:
-        """
-        Returns the data timestamp.
-        """
-        return self.__ts
-
-    def is_watermark(self) -> bool:
-        """
-        Returns whether the `DataMessage` is a watermark or not.
-        """
-        return self.__watermark
+    def __init__(self, data: Any, ts: int):
+        self.data = data
+        self.timestamp = ts
 
 
 class Input:
@@ -127,10 +103,8 @@ class Input:
         one is randomly selected.
         """
         data_msg = await self.__inner.recv()
-        data = None
-        if len(data_msg.data) > 0:
-            data = self.__deserializer(data_msg.data)
-        msg = Message(data, data_msg.ts, data_msg.is_watermark)
+        data = self.__deserializer(data_msg.data)
+        msg = Message(data, data_msg.ts)
         return msg
 
     def port_id(self) -> str:

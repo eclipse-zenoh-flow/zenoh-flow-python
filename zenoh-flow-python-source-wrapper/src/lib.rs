@@ -18,7 +18,7 @@ use pyo3_asyncio::TaskLocals;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use zenoh_flow::prelude::*;
+use zenoh_flow_nodes::prelude::*;
 use zenoh_flow_python_commons::{
     configuration_into_py, context_into_py, from_pyerr_to_zferr, outputs_into_py, PythonState,
 };
@@ -42,80 +42,65 @@ struct PySource {
 
 #[async_trait]
 impl Source for PySource {
-    async fn new(
-        context: Context,
-        configuration: Option<Configuration>,
-        outputs: Outputs,
-    ) -> Result<Self> {
-        let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
+    async fn new(context: Context, configuration: Configuration, outputs: Outputs) -> Result<Self> {
+        let lib = Arc::new(load_self().map_err(|_| anyhow!("Not found"))?);
 
         pyo3::prepare_freethreaded_python();
 
         // Configuring wrapper + python source
         let state = Arc::new(Python::with_gil(|py| {
-            match configuration {
-                Some(configuration) => {
-                    // Unwrapping configuration
-                    let script_file_path = Path::new(
-                        configuration["python-script"]
-                            .as_str()
-                            .ok_or_else(|| zferror!(ErrorKind::InvalidState))?,
-                    );
-                    let mut config = configuration.clone();
+            let script_file_path = Path::new(
+                configuration["python-script"]
+                    .as_str()
+                    .ok_or_else(|| anyhow!("Invalid State"))?,
+            );
+            let mut config = configuration.clone();
 
-                    config["python-script"].take();
-                    let py_config = config["configuration"].take();
+            config["python-script"].take();
+            let py_config = config["configuration"].take();
 
-                    // Convert configuration to Python
-                    let py_config = configuration_into_py(py, py_config)
-                        .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            // Convert configuration to Python
+            let py_config = configuration_into_py(py, py_config.into())
+                .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    // Load Python code
-                    let code = read_file(script_file_path).unwrap(); //?;
-                    let module = PyModule::from_code(
-                        py,
-                        &code,
-                        &script_file_path.to_string_lossy(),
-                        "source",
-                    )
+            // Load Python code
+            let code = read_file(script_file_path).unwrap(); //?;
+            let module =
+                PyModule::from_code(py, &code, &script_file_path.to_string_lossy(), "source")
                     .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    // Getting the correct python module
-                    let source_class = module
-                        .call_method0("register")
-                        .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            // Getting the correct python module
+            let source_class = module
+                .call_method0("register")
+                .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    let py_senders =
-                        outputs_into_py(py, outputs).map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            let py_senders =
+                outputs_into_py(py, outputs).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    // Setting asyncio event loop
-                    let asyncio = py.import("asyncio").unwrap();
+            // Setting asyncio event loop
+            let asyncio = py.import("asyncio").unwrap();
 
-                    let event_loop = asyncio.call_method0("new_event_loop").unwrap();
-                    asyncio
-                        .call_method1("set_event_loop", (event_loop,))
-                        .unwrap();
-                    let event_loop_hdl = Arc::new(PyObject::from(event_loop));
-                    let py_ctx =
-                        context_into_py(&py, &context).map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            let event_loop = asyncio.call_method0("new_event_loop").unwrap();
+            asyncio
+                .call_method1("set_event_loop", (event_loop,))
+                .unwrap();
+            let event_loop_hdl = Arc::new(PyObject::from(event_loop));
+            let py_ctx = context_into_py(&py, &context).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    // Initialize Python Object
-                    let py_source: PyObject = source_class
-                        .call1((py_ctx, py_config, py_senders))
-                        .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                        .into();
+            // Initialize Python Object
+            let py_source: PyObject = source_class
+                .call1((py_ctx, py_config, py_senders))
+                .map_err(|e| from_pyerr_to_zferr(e, &py))?
+                .into();
 
-                    let py_state = PythonState {
-                        module: Arc::new(source_class.into()),
-                        py_state: Arc::new(py_source),
-                        event_loop: event_loop_hdl,
-                        asyncio_module: Arc::new(PyObject::from(asyncio)),
-                    };
+            let py_state = PythonState {
+                module: Arc::new(source_class.into()),
+                py_state: Arc::new(py_source),
+                event_loop: event_loop_hdl,
+                asyncio_module: Arc::new(PyObject::from(asyncio)),
+            };
 
-                    Ok(py_state)
-                }
-                None => Err(zferror!(ErrorKind::InvalidState)),
-            }
+            Ok::<zenoh_flow_python_commons::PythonState, anyhow::Error>(py_state)
         })?);
 
         Ok(Self { _lib: lib, state })

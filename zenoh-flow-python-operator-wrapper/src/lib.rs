@@ -18,7 +18,7 @@ use pyo3_asyncio::TaskLocals;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use zenoh_flow::prelude::*;
+use zenoh_flow_nodes::prelude::*;
 use zenoh_flow_python_commons::{
     configuration_into_py, context_into_py, from_pyerr_to_zferr, inputs_into_py, outputs_into_py,
     PythonState,
@@ -33,6 +33,8 @@ use libloading::Library;
 static LOAD_FLAGS: std::os::raw::c_int =
     libloading::os::unix::RTLD_NOW | libloading::os::unix::RTLD_GLOBAL;
 
+// NOTE: This variable is not read at runtime but is generated at compilation time (hence the `static`) by the build.rs
+// script.
 pub static PY_LIB: &str = env!("PY_LIB");
 
 #[export_operator]
@@ -46,77 +48,79 @@ struct PyOperator {
 impl Operator for PyOperator {
     async fn new(
         ctx: Context,
-        configuration: Option<Configuration>,
+        configuration: Configuration,
         inputs: Inputs,
         outputs: Outputs,
     ) -> Result<Self> {
-        let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
+        let _ = tracing_subscriber::fmt().try_init();
+        let lib = Arc::new(load_self().map_err(|_| anyhow!("Not found"))?);
 
         pyo3::prepare_freethreaded_python();
 
         let state = Arc::new(Python::with_gil(|py| {
-            match configuration {
-                Some(configuration) => {
-                    // Unwrapping configuration
-                    let script_file_path = Path::new(
-                        configuration["python-script"]
-                            .as_str()
-                            .ok_or_else(|| zferror!(ErrorKind::InvalidState))?,
-                    );
-                    let mut config = configuration.clone();
-                    config["python-script"].take();
-                    let py_config = config["configuration"].take();
+            let script_file_path = Path::new(
+                configuration["python-script"]
+                    .as_str()
+                    .ok_or_else(|| anyhow!("Invalid state"))?,
+            );
+            let mut config = configuration.clone();
+            config["python-script"].take();
+            let py_config = config["configuration"].take();
 
-                    // Convert configuration to Python
-                    let py_config = configuration_into_py(py, py_config)
-                        .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            // Convert configuration to Python
+            tracing::info!("Converting configuration to Python");
+            let py_config = configuration_into_py(py, py_config.into())
+                .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    // Load Python code
-                    let code = read_file(script_file_path)?;
-                    let module =
-                        PyModule::from_code(py, &code, &script_file_path.to_string_lossy(), "op")
-                            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            // Load Python code
+            tracing::info!("Loading Python script");
+            let code = read_file(script_file_path)?;
+            let module = PyModule::from_code(py, &code, &script_file_path.to_string_lossy(), "op")
+                .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    // Getting the correct python module
-                    let op_class = module
-                        .call_method0("register")
-                        .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            // Getting the correct python module
+            tracing::info!("Calling `register` from Python module");
+            let op_class = module
+                .call_method0("register")
+                .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    let py_receivers =
-                        inputs_into_py(py, inputs).map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            tracing::info!("Converting inputs to Python");
+            let py_receivers =
+                inputs_into_py(py, inputs).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    let py_senders =
-                        outputs_into_py(py, outputs).map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            tracing::info!("Converting outputs to Python");
+            let py_senders =
+                outputs_into_py(py, outputs).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    // Setting asyncio event loop
-                    let asyncio = py.import("asyncio").unwrap();
+            // Setting asyncio event loop
+            tracing::info!("Setting `asyncio` event loop");
+            let asyncio = py.import("asyncio").unwrap();
 
-                    let event_loop = asyncio.call_method0("new_event_loop").unwrap();
-                    asyncio
-                        .call_method1("set_event_loop", (event_loop,))
-                        .unwrap();
-                    let event_loop_hdl = Arc::new(PyObject::from(event_loop));
-                    let asyncio_module = Arc::new(PyObject::from(asyncio));
-                    let py_ctx =
-                        context_into_py(&py, &ctx).map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            let event_loop = asyncio.call_method0("new_event_loop").unwrap();
+            asyncio
+                .call_method1("set_event_loop", (event_loop,))
+                .unwrap();
+            let event_loop_hdl = Arc::new(PyObject::from(event_loop));
+            let asyncio_module = Arc::new(PyObject::from(asyncio));
 
-                    // Initialize Python Object
-                    let py_op: PyObject = op_class
-                        .call1((py_ctx, py_config, py_receivers, py_senders))
-                        .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                        .into();
+            tracing::info!("Converting `context` to Python");
+            let py_ctx = context_into_py(&py, &ctx).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    let py_state = PythonState {
-                        module: Arc::new(op_class.into()),
-                        py_state: Arc::new(py_op),
-                        event_loop: event_loop_hdl,
-                        asyncio_module,
-                    };
+            // Initialize Python Object
+            tracing::info!("Creating instance of Python Operator");
+            let py_op: PyObject = op_class
+                .call1((py_ctx, py_config, py_receivers, py_senders))
+                .map_err(|e| from_pyerr_to_zferr(e, &py))?
+                .into();
 
-                    Ok(py_state)
-                }
-                None => Err(zferror!(ErrorKind::InvalidState)),
-            }
+            let py_state = PythonState {
+                module: Arc::new(op_class.into()),
+                py_state: Arc::new(py_op),
+                event_loop: event_loop_hdl,
+                asyncio_module,
+            };
+
+            Ok::<PythonState, anyhow::Error>(py_state)
         })?);
 
         Ok(Self { _lib: lib, state })
@@ -144,7 +148,7 @@ impl Node for PyOperator {
 }
 
 fn load_self() -> Result<Library> {
-    log::trace!("Python Operator Wrapper loading Python {}", PY_LIB);
+    tracing::info!("Python Operator Wrapper loading Python {}", PY_LIB);
     // Very dirty hack! We explicit load the python library!
     let lib_name = libloading::library_filename(PY_LIB);
     unsafe {

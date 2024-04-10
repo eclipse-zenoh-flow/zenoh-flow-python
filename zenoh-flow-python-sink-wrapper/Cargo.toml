@@ -25,12 +25,13 @@ readme = "README.md"
 repository = "https://github.com/ZettaScaleLabs/zenoh-flow-python"
 
 [dependencies]
+anyhow = { workspace = true }
 async-trait = { workspace = true }
 libloading = { workspace = true }
 log = { workspace = true }
 pyo3 = { workspace = true }
 pyo3-asyncio = { workspace = true }
-zenoh-flow = { workspace = true }
+zenoh-flow-nodes = { workspace = true }
 zenoh-flow-python-commons = { version =  "0.5.0-alpha.1", path = "../zenoh-flow-python-commons/" }
 
 [build-dependencies]
