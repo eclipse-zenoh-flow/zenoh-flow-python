@@ -12,21 +12,19 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 
-use async_trait::async_trait;
-use pyo3::{prelude::*, types::PyModule};
-use pyo3_asyncio::TaskLocals;
-use std::fs;
-use std::path::Path;
-use std::sync::Arc;
-use zenoh_flow::prelude::*;
-use zenoh_flow_python_commons::{
-    configuration_into_py, context_into_py, from_pyerr_to_zferr, inputs_into_py, PythonState,
-};
+use std::{fs, path::Path, sync::Arc};
 
+use async_trait::async_trait;
 #[cfg(target_family = "unix")]
 use libloading::os::unix::Library;
 #[cfg(target_family = "windows")]
 use libloading::Library;
+use pyo3::{prelude::*, types::PyModule};
+use pyo3_asyncio::TaskLocals;
+use zenoh_flow_nodes::prelude::*;
+use zenoh_flow_python_commons::{
+    configuration_into_py, context_into_py, from_pyerr_to_zferr, inputs_into_py, PythonState,
+};
 
 #[cfg(target_family = "unix")]
 static LOAD_FLAGS: std::os::raw::c_int =
@@ -43,76 +41,66 @@ struct PySink {
 
 #[async_trait]
 impl Sink for PySink {
-    async fn new(
-        ctx: Context,
-        configuration: Option<Configuration>,
-        inputs: Inputs,
-    ) -> Result<Self> {
-        let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
+    async fn new(ctx: Context, configuration: Configuration, inputs: Inputs) -> Result<Self> {
+        let lib = Arc::new(load_self().map_err(|_| anyhow!("Failed to load Python library"))?);
 
         pyo3::prepare_freethreaded_python();
 
         let state = Arc::new(Python::with_gil(|py| {
-            match configuration {
-                Some(configuration) => {
-                    // Unwrapping configuration
-                    let script_file_path = Path::new(
-                        configuration["python-script"]
-                            .as_str()
-                            .ok_or_else(|| zferror!(ErrorKind::InvalidState))?,
-                    );
-                    let mut config = configuration.clone();
+            // Unwrapping configuration
+            let script_file_path = Path::new(
+                configuration["python-script"]
+                    .as_str()
+                    .ok_or_else(|| anyhow!("Invalid state"))?,
+            );
+            let mut config = configuration.clone();
 
-                    config["python-script"].take();
+            config["python-script"].take();
 
-                    let py_config = config["configuration"].take();
+            let py_config = config["configuration"].take();
 
-                    // Convert configuration to Python
-                    let py_config = configuration_into_py(py, py_config)
-                        .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            // Convert configuration to Python
+            let py_config = configuration_into_py(py, py_config.into())
+                .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    // Load Python code
-                    let code = read_file(script_file_path)?;
-                    let module =
-                        PyModule::from_code(py, &code, &script_file_path.to_string_lossy(), "sink")
-                            .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            // Load Python code
+            let code = read_file(script_file_path)?;
+            let module =
+                PyModule::from_code(py, &code, &script_file_path.to_string_lossy(), "sink")
+                    .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    // Getting the correct python module
-                    let sink_class = module
-                        .call_method0("register")
-                        .map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            // Getting the correct python module
+            let sink_class = module
+                .call_method0("register")
+                .map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    let py_receivers =
-                        inputs_into_py(py, inputs).map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            let py_receivers =
+                inputs_into_py(py, inputs).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    // Setting asyncio event loop
-                    let asyncio = py.import("asyncio").unwrap();
+            // Setting asyncio event loop
+            let asyncio = py.import("asyncio").unwrap();
 
-                    let event_loop = asyncio.call_method0("new_event_loop").unwrap();
-                    asyncio
-                        .call_method1("set_event_loop", (event_loop,))
-                        .unwrap();
-                    let event_loop_hdl = Arc::new(PyObject::from(event_loop));
-                    let py_ctx =
-                        context_into_py(&py, &ctx).map_err(|e| from_pyerr_to_zferr(e, &py))?;
+            let event_loop = asyncio.call_method0("new_event_loop").unwrap();
+            asyncio
+                .call_method1("set_event_loop", (event_loop,))
+                .unwrap();
+            let event_loop_hdl = Arc::new(PyObject::from(event_loop));
+            let py_ctx = context_into_py(&py, &ctx).map_err(|e| from_pyerr_to_zferr(e, &py))?;
 
-                    // Initialize Python Object
-                    let py_sink: PyObject = sink_class
-                        .call1((py_ctx, py_config, py_receivers))
-                        .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                        .into();
+            // Initialize Python Object
+            let py_sink: PyObject = sink_class
+                .call1((py_ctx, py_config, py_receivers))
+                .map_err(|e| from_pyerr_to_zferr(e, &py))?
+                .into();
 
-                    let py_state = PythonState {
-                        module: Arc::new(sink_class.into()),
-                        py_state: Arc::new(py_sink),
-                        event_loop: event_loop_hdl,
-                        asyncio_module: Arc::new(PyObject::from(asyncio)),
-                    };
+            let py_state = PythonState {
+                module: Arc::new(sink_class.into()),
+                py_state: Arc::new(py_sink),
+                event_loop: event_loop_hdl,
+                asyncio_module: Arc::new(PyObject::from(asyncio)),
+            };
 
-                    Ok(py_state)
-                }
-                None => Err(zferror!(ErrorKind::InvalidState)),
-            }
+            Ok::<PythonState, anyhow::Error>(py_state)
         })?);
 
         Ok(Self { _lib: lib, state })
@@ -140,7 +128,7 @@ impl Node for PySink {
 }
 
 fn load_self() -> Result<Library> {
-    log::trace!("Python Sink Wrapper loading Python {}", PY_LIB);
+    tracing::info!("Python Sink Wrapper loading Python {}", PY_LIB);
 
     // Very dirty hack! We explicit load the python library!
     let lib_name = libloading::library_filename(PY_LIB);
