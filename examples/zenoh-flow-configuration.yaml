@@ -1,0 +1,8 @@
+name: zf-python
+
+extensions:
+  - file_extension: py
+    libraries:
+      sink: /Users/julien/dev/zenoh-flow-python-2/target/debug/libzenoh_flow_python_sink_wrapper_2.dylib
+      source: /Users/julien/dev/zenoh-flow-python-2/target/debug/libzenoh_flow_python_sink_wrapper_2.dylib
+      operator: /Users/julien/dev/zenoh-flow-python-2/target/debug/libzenoh_flow_python_sink_wrapper_2.dylib

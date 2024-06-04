@@ -1,0 +1,29 @@
+name: zenoh-flow-python
+
+vars:
+  BASE_DIR: "/path/to/zenoh-flow-python/examples"
+
+
+sources:
+  - id:  zenoh-source
+    description:  "A Zenoh builtin Source"
+    zenoh-subscribers:
+      "out":  "zenoh-flow-python/source"
+
+
+sinks:
+  - id:  python-sink
+    library: "file://{{ BASE_DIR }}/sink.py"
+    configuration:
+        test: configuration-test
+    inputs:
+      - in
+
+
+links:
+  - from:
+      node:  zenoh-source
+      output: out
+    to:
+      node:  python-sink
+      input:  in
