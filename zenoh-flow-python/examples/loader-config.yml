@@ -1,7 +1,0 @@
-extensions:
-  - name: python
-    file_extension: py
-    source_lib: ./target/debug/libzenoh_flow_python_source_wrapper.so
-    sink_lib: ./target/debug/libzenoh_flow_python_sink_wrapper.so
-    operator_lib: ./target/debug/libzenoh_flow_python_operator_wrapper.so
-    config_lib_key: python-script

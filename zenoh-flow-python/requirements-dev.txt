@@ -1,3 +1,2 @@
-
-wheel
-maturin>=0.12.18
+# The version range of `maturin` should be the same as in pyproject.toml
+maturin>=1.5,<2.0

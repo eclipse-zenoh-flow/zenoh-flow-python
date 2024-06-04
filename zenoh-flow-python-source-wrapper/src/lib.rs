@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2022 ZettaScale Technology
+// Copyright © 2022 ZettaScale Technology
 //
 // This program and the accompanying materials are made available under the
 // terms of the Eclipse Public License 2.0 which is available at
@@ -12,152 +12,139 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 
-use async_trait::async_trait;
-use pyo3::{prelude::*, types::PyModule};
-use pyo3_asyncio::TaskLocals;
-use std::fs;
-use std::path::Path;
 use std::sync::Arc;
-use zenoh_flow::prelude::*;
-use zenoh_flow_python_commons::{
-    configuration_into_py, context_into_py, from_pyerr_to_zferr, outputs_into_py, PythonState,
+
+use async_trait::async_trait;
+use pyo3::{types::PyModule, PyAny, Python};
+use zenoh_flow_nodes::{
+    prelude as zf,
+    prelude::{anyhow, export_source, Source},
 };
-
-#[cfg(target_family = "unix")]
-use libloading::os::unix::Library;
-#[cfg(target_family = "windows")]
-use libloading::Library;
-
-#[cfg(target_family = "unix")]
-static LOAD_FLAGS: std::os::raw::c_int =
-    libloading::os::unix::RTLD_NOW | libloading::os::unix::RTLD_GLOBAL;
-
-pub static PY_LIB: &str = env!("PY_LIB");
+use zenoh_flow_python::{configuration_into_py, Context, Outputs, PythonState};
 
 #[export_source]
-struct PySource {
+struct ZenohFlowPythonSource {
     state: Arc<PythonState>,
-    _lib: Arc<Library>,
 }
 
 #[async_trait]
-impl Source for PySource {
+impl Source for ZenohFlowPythonSource {
     async fn new(
-        context: Context,
-        configuration: Option<Configuration>,
-        outputs: Outputs,
-    ) -> Result<Self> {
-        let lib = Arc::new(load_self().map_err(|_| zferror!(ErrorKind::NotFound))?);
+        context: zf::Context,
+        configuration: zf::Configuration,
+        outputs: zf::Outputs,
+    ) -> zf::Result<Self> {
+        pyo3_pylogger::register(&format!("zenoh_flow_python_source::{}", context.node_id()));
+        let _ = tracing_subscriber::fmt::try_init();
 
-        pyo3::prepare_freethreaded_python();
-
-        // Configuring wrapper + python source
         let state = Arc::new(Python::with_gil(|py| {
-            match configuration {
-                Some(configuration) => {
-                    // Unwrapping configuration
-                    let script_file_path = Path::new(
-                        configuration["python-script"]
-                            .as_str()
-                            .ok_or_else(|| zferror!(ErrorKind::InvalidState))?,
-                    );
-                    let mut config = configuration.clone();
+            // NOTE: See https://github.com/PyO3/pyo3/issues/1741#issuecomment-1191125053
+            //
+            // On macOS, the site-packages folder of the current virtual environment is not added to the `sys.path`
+            // making it impossible to load the modules that were installed on it.
+            #[cfg(target_os = "macos")]
+            if let Ok(venv) = std::env::var("VIRTUAL_ENV") {
+                let version_info = py.version_info();
+                let sys = py.import("sys").unwrap();
+                let sys_path = sys.getattr("path").unwrap();
+                let site_packages_dir = format!(
+                    "{}/lib/python{}.{}/site-packages",
+                    venv, version_info.major, version_info.minor
+                );
 
-                    config["python-script"].take();
-                    let py_config = config["configuration"].take();
+                tracing::debug!("Adding virtual environment site-packages folder to Python interpreter path: {site_packages_dir}");
 
-                    // Convert configuration to Python
-                    let py_config = configuration_into_py(py, py_config)
-                        .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-
-                    // Load Python code
-                    let code = read_file(script_file_path).unwrap(); //?;
-                    let module = PyModule::from_code(
-                        py,
-                        &code,
-                        &script_file_path.to_string_lossy(),
-                        "source",
-                    )
-                    .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-
-                    // Getting the correct python module
-                    let source_class = module
-                        .call_method0("register")
-                        .map_err(|e| from_pyerr_to_zferr(e, &py))?;
-
-                    let py_senders =
-                        outputs_into_py(py, outputs).map_err(|e| from_pyerr_to_zferr(e, &py))?;
-
-                    // Setting asyncio event loop
-                    let asyncio = py.import("asyncio").unwrap();
-
-                    let event_loop = asyncio.call_method0("new_event_loop").unwrap();
-                    asyncio
-                        .call_method1("set_event_loop", (event_loop,))
-                        .unwrap();
-                    let event_loop_hdl = Arc::new(PyObject::from(event_loop));
-                    let py_ctx =
-                        context_into_py(&py, &context).map_err(|e| from_pyerr_to_zferr(e, &py))?;
-
-                    // Initialize Python Object
-                    let py_source: PyObject = source_class
-                        .call1((py_ctx, py_config, py_senders))
-                        .map_err(|e| from_pyerr_to_zferr(e, &py))?
-                        .into();
-
-                    let py_state = PythonState {
-                        module: Arc::new(source_class.into()),
-                        py_state: Arc::new(py_source),
-                        event_loop: event_loop_hdl,
-                        asyncio_module: Arc::new(PyObject::from(asyncio)),
-                    };
-
-                    Ok(py_state)
-                }
-                None => Err(zferror!(ErrorKind::InvalidState)),
+                sys_path
+                    .call_method1("append", (site_packages_dir,))
+                    .unwrap();
             }
+
+            let py_configuration = configuration_into_py(py, configuration)
+                .map_err(|e| anyhow!("Failed to convert `Configuration` to `PyObject`: {e:?}"))?;
+
+            // Setting asyncio event loop
+            let asyncio = py.import("asyncio").unwrap();
+            let event_loop = asyncio.call_method0("new_event_loop").unwrap();
+            asyncio
+                .call_method1("set_event_loop", (event_loop,))
+                .unwrap();
+            let task_locals = pyo3_asyncio::TaskLocals::new(event_loop);
+
+            let user_code = std::fs::read_to_string(context.library_path()).map_err(|e| {
+                anyhow!(
+                    "Failed to read < {} >: {e:?}",
+                    context.library_path().display()
+                )
+            })?;
+
+            let python_module = PyModule::from_code(
+                py,
+                &user_code,
+                &context.library_path().to_string_lossy(),
+                "zenoh_flow_python_source",
+            )
+            .map_err(|e| {
+                anyhow!(
+                    "Failed to create `PyModule` from script < {} >: {e:?}",
+                    context.library_path().display()
+                )
+            })?;
+
+            let source_class = python_module
+                .call_method0("register")
+                .map_err(|e| anyhow!("Call to `register` failed with: {e:?}"))?;
+
+            // NOTE: `call1` will call the object pointed at by `source_class` with the provided parameters.  This
+            // translates to creating a new instance of the class.
+            let source_instance = source_class
+                .call1((
+                    Context::from(context),
+                    py_configuration,
+                    Outputs::from(outputs),
+                ))
+                .map_err(|e| anyhow!("Failed to create a Source instance: {e:?}"))?;
+
+            zf::Result::Ok(PythonState {
+                node_instance: Arc::new(source_instance.into()),
+                task_locals: Arc::new(task_locals),
+            })
         })?);
 
-        Ok(Self { _lib: lib, state })
+        Ok(Self { state })
     }
 }
 
 #[async_trait]
-impl Node for PySource {
-    async fn iteration(&self) -> Result<()> {
+impl zf::Node for ZenohFlowPythonSource {
+    async fn iteration(&self) -> zf::Result<()> {
+        tracing::debug!("iteration");
+
         Python::with_gil(|py| {
-            let source_class = self.state.py_state.cast_as::<PyAny>(py)?;
+            let source_instance = self
+                .state
+                .node_instance
+                .downcast::<PyAny>(py)
+                .map_err(|e| anyhow!("Failed to downcast Source instance to `PyAny`: {e:?}"))?;
 
-            let event_loop = self.state.event_loop.cast_as::<PyAny>(py)?;
+            let iteration_coroutine = source_instance
+                .call_method0("iteration")
+                .map_err(|e| anyhow!("Call to `iteration` failed with: {e:?}"))?;
 
-            let task_locals = TaskLocals::new(event_loop);
+            let iteration =
+                pyo3_asyncio::into_future_with_locals(&self.state.task_locals, iteration_coroutine)
+                    .map_err(|e| {
+                        anyhow!(
+                        "(pyo3-asyncio) Failed to transform Python coroutine to Rust future: {e:?}"
+                    )
+                    })?;
 
-            let py_future = source_class.call_method0("iteration")?;
+            let _ = pyo3_asyncio::async_std::run_until_complete(
+                self.state.task_locals.event_loop(py),
+                iteration,
+            )
+            .map_err(|e| anyhow!("Iteration failed with: {e:?}"))?;
 
-            let fut = pyo3_asyncio::into_future_with_locals(&task_locals, py_future)?;
-            pyo3_asyncio::async_std::run_until_complete(event_loop, fut)
+            Ok(())
         })
-        .map_err(|e| Python::with_gil(|py| from_pyerr_to_zferr(e, &py)))?;
-        Ok(())
     }
-}
-
-fn load_self() -> Result<Library> {
-    log::trace!("Python Source Wrapper loading Python {}", PY_LIB);
-
-    // Very dirty hack! We explicit load the python library!
-    let lib_name = libloading::library_filename(PY_LIB);
-    unsafe {
-        #[cfg(target_family = "unix")]
-        let lib = Library::open(Some(lib_name), LOAD_FLAGS)?;
-
-        #[cfg(target_family = "windows")]
-        let lib = Library::new(lib_name)?;
-
-        Ok(lib)
-    }
-}
-
-fn read_file(path: &Path) -> Result<String> {
-    Ok(fs::read_to_string(path)?)
 }
