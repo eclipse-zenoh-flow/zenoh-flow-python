@@ -64,24 +64,21 @@ You need to change the configuration of Zenoh-Flow to let it know how to load Py
 *If* you launched the Zenoh-Flow runtime in a **standalone** fashion, you need to provide a configuration that contains the following:
 
 ```yaml
-name: my-zenoh-flow
-
-extensions:
-  - file_extension: py
-    libraries:
-      # Linux
-      sink: /path/to/zenoh-flow-python/target/release/libzenoh_flow_python_sink_wrapper.so
-      operator: /path/to/zenoh-flow-python/target/release/libzenoh_flow_python_operator_wrapper.so
-      source: /path/to/zenoh-flow-python/target/release/libzenoh_flow_python_source_wrapper.so
-      # macOS
-      # sink: /path/to/zenoh-flow-python/target/release/libzenoh_flow_python_sink_wrapper.dylib
-      # operator: /path/to/zenoh-flow-python/target/release/libzenoh_flow_python_operator_wrapper.dylib
-      # source: /path/to/zenoh-flow-python/target/release/libzenoh_flow_python_source_wrapper.dylib
+- file_extension: py
+  libraries:
+    # Linux
+    sink: /path/to/zenoh-flow-python/target/release/libzenoh_flow_python_sink_wrapper.so
+    operator: /path/to/zenoh-flow-python/target/release/libzenoh_flow_python_operator_wrapper.so
+    source: /path/to/zenoh-flow-python/target/release/libzenoh_flow_python_source_wrapper.so
+    # macOS
+    # sink: /path/to/zenoh-flow-python/target/release/libzenoh_flow_python_sink_wrapper.dylib
+    # operator: /path/to/zenoh-flow-python/target/release/libzenoh_flow_python_operator_wrapper.dylib
+    # source: /path/to/zenoh-flow-python/target/release/libzenoh_flow_python_source_wrapper.dylib
 ```
 
 *If* you launched Zenoh-Flow as a **Zenoh plugin**, you need to update the Zenoh configuration with the following:
 
-```json
+```json5
 {
     "plugins": {
         "zenoh_flow": {
