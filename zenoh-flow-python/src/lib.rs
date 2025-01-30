@@ -158,6 +158,12 @@ impl From<zf::LinkMessage> for LinkMessage {
 impl LinkMessage {
     pub fn payload(&mut self) -> PyResult<&[u8]> {
         match self.message.payload() {
+            // TODO As pointed by @gabrik, in a previous version of Zenoh-Flow the call to the
+            //      method `as_slice` was replaced with another approach because, performance-wise,
+            //      it was vastly inferior.
+            //
+            //      Given that pyO3 changed quite a bit between these versions, we ought to check
+            //      if that assumption still holds.
             zf::Payload::Bytes(bytes) => Ok(bytes.as_slice()),
             zf::Payload::Typed((data, serialiser)) => {
                 if self.serialised_payload.is_empty() {
